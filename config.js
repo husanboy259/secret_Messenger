@@ -8,6 +8,7 @@
        deploy: 'wss://messger-backend.onrender.com'
    ===================================================================== */
 window.MESSGER = {
-    API_BASE: '',
-    WS_BASE: ''
+    API_BASE: 'https://secret-messenger-xg4y.onrender.com',
+    WS_BASE: 'wss://secret-messenger-xg4y.onrender.com'
 };
+
