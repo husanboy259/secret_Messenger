@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirish — Messger</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="auth-split">
+        <!-- Chap panel: Brend + illyustratsiya -->
+        <div class="auth-brand">
+            <div class="brand-inner">
+                <div class="logo">
+                    <span class="logo-icon">💬</span>
+                    <span class="logo-text">Messger</span>
+                </div>
+                <h1 class="gradient-text">Do'stlaringiz bilan<br>yana bog'laning</h1>
+                <p>
+                    Tezkor, xavfsiz va real-time xabarlar. Qaysi qurilmada bo'lishingizdan
+                    qat'i nazar — do'stlaringiz har doim yaqin.
+                </p>
+
+                <div class="brand-chat-mock">
+                    <div class="mock-bubble in">Salom! Tanishganimdan xursandman 🎉</div>
+                    <div class="mock-bubble out">Men ham! Real-time xabarlar ishlamoqda ⚡</div>
+                </div>
+
+                <div class="brand-stats">
+                    <div><strong>24/7</strong><span>Onlayn</span></div>
+                    <div><strong>100%</strong><span>Bepul</span></div>
+                    <div><strong>🔒</strong><span>Xavfsiz</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- O'ng panel: Login formasi -->
+        <div class="auth-panel">
+            <a href="index.html" class="back-home"><span>←</span> Bosh sahifaga qaytish</a>
+
+            <div class="auth-card wide">
+                <div class="auth-header">
+                    <h2>Xush kelibsiz!</h2>
+                    <p>Messger hisobingizga kiring</p>
+                </div>
+
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Foydalanuvchi nomi yoki Email</label>
+                        <input type="text" id="username" class="form-control" placeholder="Masalan: sardor_dev" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Parol</label>
+                        <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <div class="form-footer">
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                            <input type="checkbox" style="accent-color: var(--accent-color);"> Meni eslab qol
+                        </label>
+                        <a href="#">Parolni unutdingizmi?</a>
+                    </div>
+                    <div id="form-error" class="form-error" role="alert" style="display:none;"></div>
+                    <button type="submit" class="btn btn-primary">Kirish</button>
+                </form>
+
+                <div class="auth-card-bottom">
+                    Hisobingiz yo'qmi? <a href="register.html">Ro'yxatdan o'tish</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        if (new URLSearchParams(window.location.search).get('registered') === '1') {
+            const errorBox = document.getElementById('form-error');
+            errorBox.style.display = 'block';
+            errorBox.textContent = "Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi kiring. 🎉";
+            errorBox.style.background = 'rgba(16, 185, 129, 0.12)';
+            errorBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            errorBox.style.color = '#34d399';
+        }
+
+        // Backend: POST /api/auth/login/ { username, password } -> { access, refresh, user, account_id }
+        const API_URL = 'http://127.0.0.1:8000/api/auth/login/';
+
+        const form = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const errorBox = document.getElementById('form-error');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                errorBox.textContent = 'Username va parolni to\'ldiring.';
+                errorBox.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Yuklanmoqda...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const firstError = Object.values(data)[0];
+                    errorBox.textContent = Array.isArray(firstError)
+                        ? firstError[0]
+                        : (firstError || 'Kirish muvaffaqiyatsiz bo\'ldi.');
+                    errorBox.style.display = 'block';
+                    return;
+                }
+
+                localStorage.setItem('access', data.access);
+                localStorage.setItem('refresh', data.refresh);
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                } else {
+                    localStorage.setItem('user', JSON.stringify({ username, display_name: username }));
+                }
+                window.location.href = 'messenger.html';
+            } catch (err) {
+                errorBox.textContent = "Serverga ulanib bo'lmadi. Django ishlayotganini tekshiring.";
+                errorBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Kirish';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ro'yxatdan o'tish — Messger</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="auth-split">
+        <div class="auth-brand">
+            <div class="brand-inner">
+                <div class="logo">
+                    <span class="logo-icon">💬</span>
+                    <span class="logo-text">Messger</span>
+                </div>
+                <h1 class="gradient-text">Hisob yarating<br>suhbatni boshlang</h1>
+                <p>
+                    Bir daqiqada ro'yxatdan o'ting va do'stlaringiz bilan
+                    real-time muloqotni boshlang.
+                </p>
+                <div class="brand-chat-mock">
+                    <div class="mock-bubble in">Yangi xabaringiz bor 📩</div>
+                    <div class="mock-bubble out">Ro'yxatdan o'tish 1 daqiqa davom etadi ✨</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-panel">
+            <a href="index.html" class="back-home"><span>←</span> Bosh sahifaga qaytish</a>
+
+            <div class="auth-card wide">
+                <div class="auth-header">
+                    <h2>Ro'yxatdan o'tish</h2>
+                    <p>Messger'ga qo'shiling</p>
+                </div>
+
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="username">Foydalanuvchi nomi</label>
+                        <input type="text" id="username" class="form-control" placeholder="sardor_dev" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email <span class="optional">(ixtiyoriy)</span></label>
+                        <input type="email" id="email" class="form-control" placeholder="sardor@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Parol</label>
+                        <input type="password" id="password" class="form-control" placeholder="kamida 8 belgi" required minlength="8">
+                        <div class="pw-meter" id="pw-meter" data-score="0"><span></span><span></span><span></span><span></span></div>
+                        <span class="pw-hint" id="pw-hint"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="password2">Parolni takrorlang</label>
+                        <input type="password" id="password2" class="form-control" placeholder="••••••••" required>
+                        <span class="field-error" id="pw-match-error"></span>
+                    </div>
+                    <div id="form-error" class="form-error" role="alert" style="display:none;"></div>
+                    <button type="submit" class="btn btn-primary">Ro'yxatdan o'tish</button>
+                </form>
+
+                <div class="auth-card-bottom">
+                    Hisobingiz bormi? <a href="login.html">Kirish</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        // Backend (roadmap 3-4-bosqich): POST /api/auth/register/
+        const API_URL = 'http://127.0.0.1:8000/api/auth/register/';
+
+        // --- Parol kuchi ---
+        const pwInput = document.getElementById('password');
+        const pwMeter = document.getElementById('pw-meter');
+        const pwHint = document.getElementById('pw-hint');
+
+        pwInput.addEventListener('input', () => {
+            const v = pwInput.value;
+            let score = 0;
+            if (v.length >= 8) score++;
+            if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+            if (/\d/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            pwMeter.dataset.score = score;
+            const labels = ['Juda zaif', 'Zaif', "O'rtacha", 'Yaxshi', "Kuchli"];
+            pwHint.textContent = 'Parol kuchi: ' + labels[score];
+        });
+
+        const form = document.getElementById('register-form');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const password2 = document.getElementById('password2');
+        const matchError = document.getElementById('pw-match-error');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const errorBox = document.getElementById('form-error');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.style.display = 'none';
+            matchError.textContent = '';
+
+            const username = usernameInput.value.trim();
+            const password = pwInput.value;
+
+            if (password !== password2.value) {
+                matchError.textContent = 'Parollar mos kelmadi.';
+                return;
+            }
+            if (password.length < 8) {
+                errorBox.textContent = 'Parol kamida 8 belgidan iborat bo\'lishi kerak.';
+                errorBox.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Yuklanmoqda...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        email: emailInput.value.trim(),
+                        password,
+                        password_confirm: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const firstError = Object.values(data)[0];
+                    errorBox.textContent = Array.isArray(firstError)
+                        ? firstError[0]
+                        : (firstError || 'Ro\'yxatdan o\'tish muvaffaqiyatsiz.');
+                    errorBox.style.display = 'block';
+                    return;
+                }
+
+                localStorage.setItem('access', data.access);
+                localStorage.setItem('refresh', data.refresh);
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                } else {
+                    localStorage.setItem('user', JSON.stringify({ username, display_name: username }));
+                }
+                window.location.href = 'messenger.html';
+            } catch (err) {
+                errorBox.textContent = "Serverga ulanib bo'lmadi. Django ishlayotganini tekshiring.";
+                errorBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Ro'yxatdan o'tish";
+            }
+        });
+    </script>
+</body>
+</html>

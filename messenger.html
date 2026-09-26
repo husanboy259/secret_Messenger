@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="night">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messger — Desktop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="messenger.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SVG ICON LIBRARY
+     ═══════════════════════════════════════════════════════════════════════ -->
+<svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <defs>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+        <symbol id="i-chats" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+        <symbol id="i-bot" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V4M8 4h8M9 13v2M15 13v2M9.5 17h5"/></symbol>
+        <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
+        <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></symbol>
+        <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+        <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+        <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/><path d="M16 12h4v3h-4a1.5 1.5 0 0 1 0-3z"/></symbol>
+        <symbol id="i-group" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></symbol>
+        <symbol id="i-channel" viewBox="0 0 24 24"><path d="m3 11 15-7v16L3 13v-2z"/><path d="M7 12.5V19a2 2 0 0 0 4 0v-5"/></symbol>
+        <symbol id="i-contacts" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/><circle cx="8.5" cy="8" r="1.2"/></symbol>
+        <symbol id="i-phone" viewBox="0 0 24 24"><path d="M15.5 21A13.5 13.5 0 0 1 3 8.5 2.5 2.5 0 0 1 5.5 6h1.8a1 1 0 0 1 1 .8l.7 3a1 1 0 0 1-.4 1.1L7.5 12a11 11 0 0 0 4.5 4.5l1.1-1.1a1 1 0 0 1 1.1-.4l3 .7a1 1 0 0 1 .8 1v1.8A2.5 2.5 0 0 1 15.5 21z"/></symbol>
+        <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></symbol>
+        <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+        <symbol id="i-clip" viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.67 3.67 0 0 1 5.18 5.18l-9.2 9.2a1.83 1.83 0 1 1-2.59-2.6l8.49-8.48"/></symbol>
+        <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></symbol>
+        <symbol id="i-send" viewBox="0 0 24 24"><path d="M21.5 2.5 11 13M21.5 2.5l-6.7 19-3.8-8.5-8.5-3.8 19-6.7z"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+        <symbol id="i-verified" viewBox="0 0 24 24"><path d="m12 2 2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.3 3 1.3 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1L2.7 15.5 4 12.5 2.7 9.5 5.5 7.9l.9-3.1 3.2.3z"/><path d="m8.5 12.2 2.4 2.4 4.6-4.8" stroke="var(--bg-base)" stroke-width="1.6"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+        <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM22 9l-6 6M16 9l6 6"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4h6v3"/></symbol>
+        <symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol>
+        <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+        <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.4 5.6a9 9 0 0 1 0 12.8"/></symbol>
+    </defs>
+</svg>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="app" id="app">
+
+    <!-- ─────────── 1. LEFT RAIL ─────────── -->
+    <nav class="rail" id="rail" aria-label="Asosiy navigatsiya">
+        <button class="rail__menu" id="btnMenu" type="button" aria-label="Menyuni ochish" aria-expanded="false" aria-controls="drawer">
+            <svg class="ico"><use href="#i-menu"/></svg>
+        </button>
+
+        <div class="rail__nav">
+            <button class="rail__item is-active" data-filter="all" type="button" title="Barcha chatlar">
+                <svg class="ico"><use href="#i-chats"/></svg>
+                <span class="rail__label">All Chats</span>
+                <span class="rail__dot" data-badge="all"></span>
+            </button>
+            <button class="rail__item" data-filter="favorite" type="button" title="PC Favorite">
+                <svg class="ico"><use href="#i-star"/></svg>
+                <span class="rail__label">PC Favorite</span>
+            </button>
+            <button class="rail__item" data-filter="bots" type="button" title="Bots">
+                <svg class="ico"><use href="#i-bot"/></svg>
+                <span class="rail__label">Bots</span>
+            </button>
+            <button class="rail__item" data-filter="football" type="button" title="Football papkasi">
+                <svg class="ico"><use href="#i-folder"/></svg>
+                <span class="rail__label">Football</span>
+            </button>
+            <button class="rail__item" data-filter="code" type="button" title="Python / Linux / HTML">
+                <svg class="ico"><use href="#i-code"/></svg>
+                <span class="rail__label">Python / Linux / HTML</span>
+            </button>
+            <button class="rail__item" data-filter="edit" type="button" title="Edit">
+                <svg class="ico"><use href="#i-pencil"/></svg>
+                <span class="rail__label">Edit</span>
+            </button>
+        </div>
+
+        <div class="rail__foot">
+            <div class="rail__me" id="railMe" title="Profil">
+                <span class="avatar avatar--sm" data-avatar="SP">?</span>
+                <span class="rail__status" aria-hidden="true"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─────────── 2. CHAT LIST PANEL ─────────── -->
+    <section class="panel" aria-label="Chatlar ro'yxati">
+        <header class="panel__head">
+            <button class="icon-btn icon-btn--ghost panel__back" id="btnBack" type="button" aria-label="Orqaga">
+                <svg class="ico"><use href="#i-back"/></svg>
+            </button>
+
+            <div class="search">
+                <svg class="ico search__ico"><use href="#i-search"/></svg>
+                <input type="search" id="searchInput" placeholder="Search" autocomplete="off" aria-label="Qidirish">
+                <button class="search__clear" id="searchClear" type="button" aria-label="Tozalash" hidden>
+                    <svg class="ico"><use href="#i-close"/></svg>
+                </button>
+            </div>
+
+            <button class="icon-btn" type="button" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+                <svg class="ico"><use href="#i-bell"/></svg>
+                <span class="pip"></span>
+            </button>
+            <button class="icon-btn" id="btnAddChat" type="button" title="Yangi chat" aria-label="Yangi chat">
+                <svg class="ico"><use href="#i-plus"/></svg>
+            </button>
+        </header>
+
+        <div class="panel__scroll" id="chatScroll">
+            <!-- Birthday banner -->
+            <button class="banner" id="bannerBirthday" type="button">
+                <span class="banner__cake">🎂</span>
+                <span class="banner__text">Bugungi bayramlar uchun pastga qarang.</span>
+                <span class="banner__close" aria-hidden="true"><svg class="ico"><use href="#i-close"/></svg></span>
+            </button>
+
+            <div class="list" id="chatList" role="listbox" aria-label="Chatlar"></div>
+
+            <p class="list__empty" id="listEmpty" hidden>Bu bo'limda chat yo'q.</p>
+        </div>
+    </section>
+
+    <!-- ─────────── 3. MAIN CHAT AREA ─────────── -->
+    <main class="stage" id="stage">
+
+        <!-- 3a. Empty state -->
+        <section class="stage__empty" id="stageEmpty">
+            <div class="mesh" aria-hidden="true">
+                <span class="mesh__orb mesh__orb--a"></span>
+                <span class="mesh__orb mesh__orb--b"></span>
+                <span class="mesh__orb mesh__orb--c"></span>
+                <span class="mesh__grid"></span>
+            </div>
+            <div class="stage__empty-inner">
+                <div class="stage__logo"><svg class="ico"><use href="#i-chats"/></svg></div>
+                <p class="notify">Select a chat to start messaging</p>
+                <p class="stage__hint">Chapdagi ro'yxatdan chatni tanlang yoki <kbd>Ctrl</kbd> + <kbd>K</kbd> bilan qidiring.</p>
+            </div>
+        </section>
+
+        <!-- 3b. Conversation -->
+        <section class="conv" id="conv" hidden>
+            <header class="conv__head">
+                <button class="icon-btn icon-btn--ghost conv__back" id="btnConvBack" type="button" aria-label="Orqaga">
+                    <svg class="ico"><use href="#i-back"/></svg>
+                </button>
+                <div class="conv__id">
+                    <span class="avatar avatar--md" id="convAvatar">W</span>
+                    <span class="conv__names">
+                        <span class="conv__title" id="convTitle">Suhbat</span>
+                        <span class="conv__status" id="convStatus">online</span>
+                    </span>
+                </div>
+                <div class="conv__actions">
+                    <button class="icon-btn" type="button" title="Qidirish" aria-label="Qidirish"><svg class="ico"><use href="#i-search"/></svg></button>
+                    <button class="icon-btn" id="btnCallVoice" type="button" title="Qo'ng'iroq" aria-label="Qo'ng'iroq"><svg class="ico"><use href="#i-phone"/></svg></button>
+                    <button class="icon-btn" id="btnCallVideo" type="button" title="Video qo'ng'iroq" aria-label="Video qo'ng'iroq"><svg class="ico"><use href="#i-channel"/></svg></button>
+                    <button class="icon-btn" type="button" title="Batafsil" aria-label="Batafsil"><svg class="ico"><use href="#i-dots"/></svg></button>
+                </div>
+            </header>
+
+            <div class="conv__pinned">
+                <svg class="ico"><use href="#i-pin"/></svg>
+                <span class="conv__pinned-text">Yopish (pin) qilingan xabar: <b>Deploy 23:00 da</b></span>
+                <button class="icon-btn icon-btn--xs" type="button" aria-label="Yopish"><svg class="ico"><use href="#i-close"/></svg></button>
+            </div>
+
+            <div class="conv__body" id="convBody">
+                <div class="conv__day"><span>Bugun</span></div>
+                <div id="messageList" class="msgs" role="log" aria-live="polite"></div>
+            </div>
+
+            <div class="composer" id="composer">
+                <div class="composer__reply" id="replyBar" hidden>
+                    <svg class="ico"><use href="#i-reply"/></svg>
+                    <span class="composer__reply-text" id="replyText"></span>
+                    <button class="icon-btn icon-btn--xs" id="replyCancel" type="button" aria-label="Bekor qilish"><svg class="ico"><use href="#i-close"/></svg></button>
+                </div>
+
+                <div class="rec" id="recBar" hidden>
+                    <span class="rec__dot"></span>
+                    <span class="rec__text">Ovoz yozilmoqda… <b id="recTime">0:00</b></span>
+                    <button class="icon-btn icon-btn--xs" id="recStop" type="button" aria-label="To'xtatish"><svg class="ico"><use href="#i-close"/></svg></button>
+                </div>
+
+                <div class="composer__row">
+                    <input type="file" id="fileInput" accept="image/*,video/*,audio/*" hidden>
+                    <button class="icon-btn icon-btn--ghost" id="btnClip" type="button" title="Rasm / video yuborish" aria-label="Fayl biriktirish"><svg class="ico"><use href="#i-clip"/></svg></button>
+                    <textarea id="messageInput" rows="1" placeholder="Message" aria-label="Xabar yozish"></textarea>
+                    <button class="icon-btn icon-btn--ghost" type="button" title="Emoji" aria-label="Emoji"><svg class="ico"><use href="#i-smile"/></svg></button>
+                    <button class="icon-btn icon-btn--ghost" id="btnMic" type="button" title="Ovozli xabar" aria-label="Ovozli xabar"><svg class="ico"><use href="#i-mic"/></svg></button>
+                    <button class="icon-btn icon-btn--send" id="btnSend" type="button" title="Yuborish" aria-label="Yuborish"><svg class="ico"><use href="#i-send"/></svg></button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     4 + 5 + 6. PROFILE / ACCOUNT DRAWER
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="scrim" id="scrim" hidden></div>
+
+<aside class="drawer" id="drawer" aria-label="Profil va menyu" aria-hidden="true">
+    <!-- 4. Profile header -->
+    <div class="drawer__profile">
+        <button class="icon-btn icon-btn--ghost drawer__collapse" id="btnCollapse" type="button" aria-label="Yopish">
+            <svg class="ico"><use href="#i-chevron"/></svg>
+        </button>
+
+        <button class="profile" id="btnProfile" type="button">
+            <span class="avatar avatar--xl" data-avatar="SP">?</span>
+            <span class="profile__meta">
+                <span class="profile__name">Men <span class="profile__emoji" id="profileEmoji">💬</span></span>
+                <span class="profile__status">offline</span>
+            </span>
+        </button>
+
+        <button class="profile__emoji-btn" id="btnEmojiStatus" type="button">Change Emoji Status</button>
+    </div>
+
+    <!-- 5. Account switcher -->
+    <div class="drawer__section" id="accountSection">
+        <div class="accounts" id="accountList" role="tablist" aria-label="Accountlar"></div>
+        <button class="account-add" id="btnAddAccount" type="button">
+            <span class="account-add__ico"><svg class="ico"><use href="#i-plus"/></svg></span>
+            <span>Add Account</span>
+        </button>
+    </div>
+
+    <!-- 6. Account menu -->
+    <nav class="drawer__section menu" id="drawerMenu" aria-label="Account menyu">
+        <button class="menu__item" data-route="profile" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-user"/></svg></span>
+            <span class="menu__label">My Profile</span>
+        </button>
+        <button class="menu__item" data-route="new-folder" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-folder"/></svg></span>
+            <span class="menu__label">New Folder</span>
+        </button>
+        <button class="menu__item" data-route="new-group" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-group"/></svg></span>
+            <span class="menu__label">New Group</span>
+        </button>
+        <button class="menu__item" data-route="new-channel" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-channel"/></svg></span>
+            <span class="menu__label">New Channel</span>
+        </button>
+        <button class="menu__item" data-route="contacts" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-contacts"/></svg></span>
+            <span class="menu__label">Contacts</span>
+            <span class="menu__trail" data-menu-badge="contacts"></span>
+        </button>
+        <button class="menu__item" data-route="settings" type="button">
+            <span class="menu__ico"><svg class="ico"><use href="#i-gear"/></svg></span>
+            <span class="menu__label">Settings</span>
+        </button>
+
+        <div class="menu__row">
+            <span class="menu__ico"><svg class="ico"><use href="#i-moon"/></svg></span>
+            <span class="menu__label">Night Mode</span>
+            <button class="switch" id="nightSwitch" type="button" role="switch" aria-checked="true" aria-label="Night Mode">
+                <span class="switch__dot"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 7. Footer -->
+    <footer class="drawer__foot">
+        <div class="drawer__foot-brand">Messger Desktop</div>
+        <div class="drawer__foot-ver">Version 0.9.0 x64 &mdash; <span class="link" id="btnAbout">About</span></div>
+    </footer>
+</aside>
+
+<!-- Emoji status popover -->
+<div class="pop" id="emojiPop" hidden role="dialog" aria-label="Emoji status">
+    <div class="pop__grid" id="emojiGrid"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     ADD CHAT MODAL (private / group / channel) — username bilan
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addTitle" hidden>
+    <div class="modal__card">
+        <header class="modal__head">
+            <div>
+                <h2 class="modal__title" id="addTitle">Yangi chat</h2>
+                <p class="modal__sub">Foydalanuvchi <b>username</b> orqali qo'shiladi</p>
+            </div>
+            <button class="icon-btn" type="button" data-close="#addModal" aria-label="Yopish">
+                <svg class="ico"><use href="#i-close"/></svg>
+            </button>
+        </header>
+
+        <div class="seg" id="addMode" role="tablist">
+            <button class="seg__btn is-active" data-mode="private" type="button" role="tab">Xabar (1:1)</button>
+            <button class="seg__btn" data-mode="group" type="button" role="tab">Guruh</button>
+            <button class="seg__btn" data-mode="channel" type="button" role="tab">Kanal</button>
+        </div>
+
+        <div class="modal__body">
+            <div class="field" id="addNameWrap" hidden>
+                <label class="field__label" for="addName">Nomi</label>
+                <input class="field__input" id="addName" type="text" placeholder="Guruh nomi" autocomplete="off">
+            </div>
+
+            <div class="field">
+                <label class="field__label" for="addSearch">Foydalanuvchini qidirish</label>
+                <div class="search search--modal">
+                    <svg class="ico search__ico"><use href="#i-search"/></svg>
+                    <input type="search" id="addSearch" placeholder="@username yoki email" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="chips" id="addSelected"></div>
+
+            <div class="add-results" id="addResults"></div>
+
+            <p class="add-none" id="addError" style="display:none" role="alert"></p>
+        </div>
+
+        <footer class="modal__foot">
+            <button class="btn btn--primary" id="addCreate" type="button" disabled>
+                <span class="add-create-label">Chatni boshlash</span>
+            </button>
+        </footer>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     CONTACTS MODAL
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="contactsModal" role="dialog" aria-modal="true" aria-labelledby="contactsTitle" hidden>
+    <div class="modal__card">
+        <header class="modal__head">
+            <div>
+                <h2 class="modal__title" id="contactsTitle">Kontaktlar</h2>
+                <p class="modal__sub">Chat boshlash uchun bosing</p>
+            </div>
+            <button class="icon-btn" type="button" data-close="#contactsModal" aria-label="Yopish">
+                <svg class="ico"><use href="#i-close"/></svg>
+            </button>
+        </header>
+        <div class="modal__body modal__body--scroll">
+            <p class="add-none" id="contactsEmpty" hidden>Kontaktlar yo'q. Kontakt qo'shish hozircha qo'llab-quvvatlanmaydi.</p>
+            <div class="add-results" id="contactsList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     FOLDER MODAL
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="folderModal" role="dialog" aria-modal="true" aria-labelledby="folderTitle" hidden>
+    <div class="modal__card">
+        <header class="modal__head">
+            <div>
+                <h2 class="modal__title" id="folderTitle">Yangi papka</h2>
+                <p class="modal__sub">Chatlar papkaga qo'shiladi</p>
+            </div>
+            <button class="icon-btn" type="button" data-close="#folderModal" aria-label="Yopish">
+                <svg class="ico"><use href="#i-close"/></svg>
+            </button>
+        </header>
+
+        <div class="modal__body">
+            <div class="field">
+                <label class="field__label" for="folderName">Papka nomi</label>
+                <input class="field__input" id="folderName" type="text" maxlength="20" placeholder="Masalan: Ish" autocomplete="off">
+            </div>
+
+            <div class="field">
+                <label class="field__label">Belgi</label>
+                <div class="chips" id="folderIcons">
+                    <button class="chip is-active" data-icon="i-folder" type="button" aria-label="Papka"><svg class="ico"><use href="#i-folder"/></svg></button>
+                    <button class="chip" data-icon="i-star" type="button" aria-label="Yulduz"><svg class="ico"><use href="#i-star"/></svg></button>
+                    <button class="chip" data-icon="i-heart" type="button" aria-label="Yurak"><svg class="ico"><use href="#i-heart"/></svg></button>
+                    <button class="chip" data-icon="i-wallet" type="button" aria-label="Hamyon"><svg class="ico"><use href="#i-wallet"/></svg></button>
+                    <button class="chip" data-icon="i-bot" type="button" aria-label="Bot"><svg class="ico"><use href="#i-bot"/></svg></button>
+                    <button class="chip" data-icon="i-group" type="button" aria-label="Guruh"><svg class="ico"><use href="#i-group"/></svg></button>
+                    <button class="chip" data-icon="i-channel" type="button" aria-label="Kanal"><svg class="ico"><use href="#i-channel"/></svg></button>
+                    <button class="chip" data-icon="i-bookmark" type="button" aria-label="Xatcho'p"><svg class="ico"><use href="#i-bookmark"/></svg></button>
+                    <button class="chip" data-icon="i-gear" type="button" aria-label="Sozlamalar"><svg class="ico"><use href="#i-gear"/></svg></button>
+                    <button class="chip" data-icon="i-send" type="button" aria-label="Jonatish"><svg class="ico"><use href="#i-send"/></svg></button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="modal__foot">
+            <button class="btn btn--primary" id="folderCreate" type="button">Yaratish</button>
+        </footer>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     VOICE / VIDEO CALL OVERLAY
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="call" id="callOverlay" hidden role="dialog" aria-modal="true" aria-label="Qo'ng'iroq">
+    <div class="call__card">
+        <div class="call__videos">
+            <video class="call__video call__video--remote" id="callRemote" autoplay playsinline></video>
+            <video class="call__video call__video--local" id="callLocal" autoplay playsinline muted></video>
+        </div>
+        <div class="call__info">
+            <div class="avatar avatar--lg" id="callAvatar"></div>
+            <div class="call__name" id="callName">—</div>
+            <div class="call__state" id="callState">Chaqlash…</div>
+            <div class="call__time" id="callTime" hidden>0:00</div>
+        </div>
+        <div class="call__actions">
+            <button class="call__btn" id="callMic" type="button" title="Mikrofon" aria-label="Mikrofon"><svg class="ico"><use href="#i-mic"/></svg></button>
+            <button class="call__btn call__btn--accept" id="btnCallAccept" type="button" title="Qabul qilish" aria-label="Qabul qilish" hidden><svg class="ico"><use href="#i-check"/></svg></button>
+            <button class="call__btn call__btn--hangup" id="callEnd" type="button" title="Qo'ng'iroqni tugatish" aria-label="Qo'ng'iroqni tugatish"><svg class="ico"><use href="#i-phone"/></svg></button>
+            <button class="call__btn" id="callSpeaker" type="button" title="Karnay" aria-label="Karnay"><svg class="ico"><use href="#i-speaker"/></svg></button>
+        </div>
+    </div>
+</div>
+
+<script src="messenger.js"></script>
+</body>
+</html>

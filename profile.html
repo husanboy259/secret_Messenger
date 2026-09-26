@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil — Messger</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">💬</span>
+                <span class="logo-text">Messger</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html">Bosh sahifa</a>
+                <a href="profile.html" class="active-link">Profil</a>
+            </div>
+            <div class="nav-cta">
+                <a href="login.html" class="btn btn-outline" id="profile-login-btn">Kirish</a>
+                <button class="mobile-menu-toggle" id="menu-toggle" aria-label="Menyu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PROFILE -->
+    <main class="profile-page">
+        <div class="container profile-container">
+
+            <!-- Chappa: Profil kartasi -->
+            <div class="profile-card">
+                <div class="profile-cover"></div>
+
+                <div class="profile-avatar-wrap">
+                    <div class="profile-avatar" id="profile-avatar">U</div>
+                    <span class="online-pill" id="online-pill"><span class="online-dot"></span> Online</span>
+                </div>
+
+                <div class="profile-head">
+                    <h1 id="profile-name">Foydalanuvchi</h1>
+                    <p class="profile-username" id="profile-username">@foydalanuvchi</p>
+                </div>
+
+                <p class="profile-bio" id="profile-bio">
+                    Salom! Men Messger'da sizga xabar yozaman. 🚀
+                </p>
+
+                <div class="profile-info" id="profile-info">
+                    <div class="info-item">
+                        <span class="info-icon">📧</span>
+                        <div>
+                            <span class="info-label">Email</span>
+                            <span class="info-value" id="info-email">email@example.com</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">🕒</span>
+                        <div>
+                            <span class="info-label">So'nggi ko'rilgan</span>
+                            <span class="info-value" id="info-last-seen">Hozir</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">👥</span>
+                        <div>
+                            <span class="info-label">Chatlar</span>
+                            <span class="info-value">0 ta suhbat</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <button class="btn btn-primary" id="edit-profile-btn">✏️ Profilni tahrirlash</button>
+                    <a href="messenger.html" class="btn btn-secondary">💬 Xabarlarga o'tish</a>
+                </div>
+            </div>
+
+            <!-- O'ngda: Tezkor ma'lumot -->
+            <aside class="profile-side">
+                <div class="side-card">
+                    <h3>Profil malumotlari</h3>
+                    <ul class="side-list">
+                        <li><span>Ism</span><strong id="side-name">—</strong></li>
+                        <li><span>Foydalanuvchi nomi</span><strong id="side-username">—</strong></li>
+                        <li><span>Holat</span><strong class="text-success">Online</strong></li>
+                    </ul>
+                </div>
+                <div class="side-card">
+                    <h3>Hisob</h3>
+                    <a href="#logout" class="btn btn-outline btn-block" id="logout-btn">🚪 Chiqish</a>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- EDIT MODAL -->
+    <div class="edit-overlay" id="edit-overlay">
+        <div class="edit-modal">
+            <button class="edit-close" id="edit-close" aria-label="Yopish">✕</button>
+            <h2>Profilni tahrirlash</h2>
+            <form id="edit-form">
+                <div class="form-group">
+                    <label for="edit-name">Ism</label>
+                    <input type="text" id="edit-name" class="form-control" placeholder="Ismingiz">
+                </div>
+                <div class="form-group">
+                    <label for="edit-bio">Bio</label>
+                    <textarea id="edit-bio" class="form-control" rows="3" placeholder="O'zingiz haqingizda"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-avatar">Avatar URL</label>
+                    <input type="url" id="edit-avatar" class="form-control" placeholder="https://... rasm manzili">
+                </div>
+                <div class="edit-buttons">
+                    <button type="submit" class="btn btn-primary">Saqlash</button>
+                    <button type="button" class="btn btn-secondary" id="edit-cancel">Bekor qilish</button>
+                </div>
+                <div id="edit-status" class="form-error" style="display:none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        // --- 1. Mobile menu toggle (navbar bilan bir xil) ---
+        const menuToggle = document.getElementById('menu-toggle');
+        const navLinks = document.querySelector('.nav-links');
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+            });
+        }
+
+        // --- 2. Login / logout holat ---
+        const access = localStorage.getItem('access');
+        const loginBtn = document.getElementById('profile-login-btn');
+
+        function currentUser() {
+            try { return JSON.parse(localStorage.getItem('user') || 'null'); }
+            catch (e) { return null; }
+        }
+
+        if (access) {
+            loginBtn.textContent = 'Xabarlar';
+            loginBtn.href = 'messenger.html';
+        } else {
+            loginBtn.textContent = 'Kirish';
+            loginBtn.href = 'login.html';
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const refresh = localStorage.getItem('refresh');
+            const access = localStorage.getItem('access');
+            if (access && refresh) {
+                try {
+                    await fetch('/api/auth/logout/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + access },
+                        body: JSON.stringify({ refresh })
+                    });
+                } catch (err) { /* refresh chiqish holatida sinab ko'riladi */ }
+            }
+            localStorage.removeItem('access');
+            localStorage.removeItem('refresh');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        });
+
+        // --- 3. Profilni to'ldirish (backend'dan yangilangan ma'lumot) ---
+        let user = currentUser();
+        const setText = (id, val) => { document.getElementById(id).textContent = val; };
+        const avatarEl = document.getElementById('profile-avatar');
+
+        function fillProfile(u) {
+            const uname = (u && (u.display_name || u.username)) || 'Foydalanuvchi';
+            const unick = (u && u.username) || 'foydalanuvchi';
+            const umail = (u && u.email) || 'email@example.com';
+            const ubio = (u && u.bio) || 'Salom! Men Messger\'da sizga xabar yozaman. 🚀';
+            const uavatar = (u && u.avatar) || null;
+
+            setText('profile-name', uname.split(' ')[0]);
+            setText('profile-username', '@' + unick);
+            setText('profile-bio', ubio);
+            setText('info-email', umail);
+            setText('side-name', uname);
+            setText('side-username', '@' + unick);
+
+            if (u && u.is_online) document.getElementById('online-pill').style.display = 'flex';
+            if (u && u.last_seen) setText('info-last-seen', new Date(u.last_seen).toLocaleString('uz-UZ'));
+
+            if (uavatar) {
+                avatarEl.textContent = '';
+                avatarEl.style.backgroundImage = 'url(' + uavatar + ')';
+                avatarEl.style.backgroundSize = 'cover';
+                avatarEl.style.backgroundPosition = 'center';
+            } else {
+                avatarEl.textContent = unick.charAt(0).toUpperCase();
+            }
+
+            document.getElementById('edit-name').value = u ? (u.display_name || u.username || '') : '';
+            document.getElementById('edit-bio').value = u ? (u.bio || '') : '';
+            document.getElementById('edit-avatar').value = uavatar || '';
+        }
+
+        fillProfile(user);
+
+        async function refreshProfile() {
+            const token = localStorage.getItem('access');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/users/me/', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.ok) {
+                    user = await res.json();
+                    localStorage.setItem('user', JSON.stringify(user));
+                    fillProfile(user);
+                }
+            } catch (e) { /* localStorage ma'lumoti yetarli */ }
+        }
+        refreshProfile();
+
+        const editStatus = () => document.getElementById('edit-status');
+
+        // --- 4. Tahrirlash modali ---
+        const overlay = document.getElementById('edit-overlay');
+        const openEdit = () => { overlay.classList.add('show'); };
+        const closeEdit = () => { overlay.classList.remove('show'); };
+
+        document.getElementById('edit-profile-btn').addEventListener('click', openEdit);
+        document.getElementById('edit-close').addEventListener('click', closeEdit);
+        document.getElementById('edit-cancel').addEventListener('click', closeEdit);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeEdit(); });
+
+        // --- 5. Saqlash (PATCH /api/users/me/ + localStorage) ---
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = editStatus();
+            const newName = document.getElementById('edit-name').value.trim();
+            const newBio = document.getElementById('edit-bio').value.trim();
+            const newAvatar = document.getElementById('edit-avatar').value.trim();
+
+            if (!newName) {
+                status.textContent = 'Ism bo\'sh bo\'lishi mumkin emas.';
+                status.style.display = 'block';
+                return;
+            }
+
+            const token = localStorage.getItem('access');
+            const updated = Object.assign({}, user || {}, {
+                display_name: newName,
+                bio: newBio,
+                avatar: newAvatar
+            });
+
+            if (token) {
+                status.textContent = 'Saqlanmoqda...';
+                status.style.display = 'block';
+                status.style.color = 'var(--text-secondary)';
+                status.style.background = 'transparent';
+                try {
+                    const res = await fetch('/api/users/me/', {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ display_name: newName, bio: newBio, avatar: newAvatar })
+                    });
+                    if (res.ok) {
+                        user = await res.json();
+                        status.style.display = 'none';
+                    } else {
+                        status.textContent = 'Serverda saqlanmadi. Local saqlandi.';
+                        status.style.display = 'block';
+                    }
+                } catch (err) {
+                    status.textContent = 'Serverga ulanishmadi. Local saqlandi.';
+                    status.style.display = 'block';
+                }
+            }
+
+            localStorage.setItem('user', JSON.stringify(updated));
+            fillProfile(user || updated);
+            closeEdit();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messger — Tezkor, Xavfsiz va Zamonaviy Messenger</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Kirgan foydalanuvchi bosh sahifani ochsa — to'g'ridan-to'g'ri messenger.html
+        if (localStorage.getItem('access')) window.location.replace('messenger.html');
+    </script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <span class="logo-icon">💬</span>
+                <span class="logo-text">Messger</span>
+            </div>
+            <nav class="nav-links">
+                <a href="#features">Imkoniyatlar</a>
+                <a href="#demo">Jonli Demo</a>
+                <a href="#about">Biz haqimizda</a>
+            </nav>
+            <div class="nav-cta">
+                <button class="btn btn-secondary" id="theme-toggle" aria-label="Mavzuni o'zgartirish">🌓</button>
+                <a href="messenger.html" class="btn btn-secondary">Ilova</a>
+                <a href="login.html" class="btn btn-primary">Kirish</a>
+            </div>
+            <button class="mobile-menu-toggle" id="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge">🚀 Yangi Avlod Chat Tizimi</div>
+                <h1>Chegarasiz muloqot va <span class="gradient-text">maksimal xavfsizlik</span></h1>
+                <p>Messger yordamida dunyoning istalgan nuqtasidagi yaqinlaringiz bilan real vaqt rejimida bog'laning. End-to-end xavfsizlik protokollari va chaqmoqdek tezkor WebSocket tizimi bilan.</p>
+                <div class="hero-actions">
+                    <a href="messenger.html" class="btn btn-primary btn-large">Desktop Ilovani Ochish</a>
+                    <a href="#features" class="btn btn-outline btn-large">Batafsil ma'lumot</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-num">0ms</span>
+                        <span class="stat-label">Kechikish</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num">100%</span>
+                        <span class="stat-label">Xavfsiz</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num">Open</span>
+                        <span class="stat-label">Source</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <!-- Interactive Mini Chat Mockup -->
+                <div class="chat-mockup">
+                    <div class="mockup-header">
+                        <div class="window-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <div class="mockup-title">
+                            <span class="status-indicator"></span>
+                            Shaxboz (Online)
+                        </div>
+                    </div>
+                    <div class="mockup-body" id="mockup-messages">
+                        <div class="chat-message incoming">
+                            <div class="avatar">👨‍💻</div>
+                            <div class="message-content">
+                                <p>Salom! Loyihaning frontend qismini tugatdingmi?</p>
+                                <span class="time">14:32</span>
+                            </div>
+                        </div>
+                        <div class="chat-message outgoing">
+                            <div class="message-content">
+                                <p>Salom! Ha, hozirgina Messger-ning ultra-zamonaviy bosh sahifasini yakunladim. 🚀</p>
+                                <span class="time">14:33</span>
+                            </div>
+                        </div>
+                        <div class="chat-message incoming">
+                            <div class="avatar">👨‍💻</div>
+                            <div class="message-content">
+                                <p>Ajoyib! Dizayni juda jozibador va tezkor ko'rinyapti. WebSocket ishlashga tayyor! ⚡</p>
+                                <span class="time">14:33</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mockup-footer">
+                        <input type="text" placeholder="Xabar yozing..." id="mockup-input">
+                        <button id="mockup-send">🚀</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nega aynan <span class="gradient-text">Messger</span>?</h2>
+                <p>Loyiha ilg'or texnologiyalar va mukammal foydalanuvchi interfeysini birlashtiradi</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Real-time Aloqa</h3>
+                    <p>WebSockets yordamida xabarlar soniyaning ulushlarida yetib boradi. Hech qanday sahifani yangilash talab qilinmaydi.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>E2E Shifrlash</h3>
+                    <p>Sizning shaxsiy chatlaringiz faqat siz va suhbatdoshingiz uchun ochiq. Ma'lumotlar to'liq himoyalangan.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>Media va Fayllar</h3>
+                    <p>Rasmlar, videolar, audio xabarlar va har qanday formatdagi fayllarni bir zumda yuklang va almashing.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Zamonaviy UI/UX</h3>
+                    <p>Ko'zni charchatmaydigan va moslashuvchan dizayn. Qorong'u va yorug'lik rejimlari hamda silliq animatsiyalar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section (Interactive Web App Mockup Layout) -->
+    <section id="demo" class="demo-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Ilova <span class="gradient-text">Interfeysi</span></h2>
+                <p>Chiroyli, sodda va barcha qurilmalarga moslashuvchan ko'rinish</p>
+            </div>
+            
+            <div class="app-dashboard-mockup">
+                <div class="dashboard-sidebar">
+                    <div class="sidebar-header">
+                        <h3>Chatlar</h3>
+                        <div class="sidebar-search">
+                            <input type="text" placeholder="Qidirish...">
+                        </div>
+                    </div>
+                    <div class="chat-list">
+                        <div class="chat-list-item active">
+                            <div class="item-avatar">🚀</div>
+                            <div class="item-details">
+                                <div class="item-name">Frontend Jamoasi</div>
+                                <div class="item-last-msg">Loyiha tayyor bo'ldi...</div>
+                            </div>
+                            <span class="item-badge">3</span>
+                        </div>
+                        <div class="chat-list-item">
+                            <div class="item-avatar">🍕</div>
+                            <div class="item-details">
+                                <div class="item-name">Do'stlar Guruhi</div>
+                                <div class="item-last-msg">Bugun ko'rishamizmi?</div>
+                            </div>
+                        </div>
+                        <div class="chat-list-item">
+                            <div class="item-avatar">👤</div>
+                            <div class="item-details">
+                                <div class="item-name">Rustam aka</div>
+                                <div class="item-last-msg">Faylni yuborib yuboring.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-chat-area">
+                    <div class="chat-area-header">
+                        <div class="active-chat-info">
+                            <span class="active-avatar">🚀</span>
+                            <div>
+                                <span class="active-name">Frontend Jamoasi</span>
+                                <span class="active-status">Yozmoqda...</span>
+                            </div>
+                        </div>
+                        <div class="chat-actions-icons">
+                            <span>📞</span>
+                            <span>📹</span>
+                            <span>⚙️</span>
+                        </div>
+                    </div>
+                    <div class="chat-area-messages">
+                        <div class="msg bubble-in">
+                            <span class="msg-author">Dilshod</span>
+                            <p>Salom barchaga! Frontend kodini yakunlashimiz kerak.</p>
+                            <span class="msg-time">12:05</span>
+                        </div>
+                        <div class="msg bubble-out">
+                            <p>Salom Dilshod! Ha, HTML/CSS va barcha zamonaviy effektlar qo'shildi. Mana hozir sinab ko'ryapmiz.</p>
+                            <span class="msg-time">12:06</span>
+                        </div>
+                        <div class="msg bubble-in">
+                            <span class="msg-author">Sardor</span>
+                            <p>Ajoyib! Responsive ham mukammal ishlayaptimi?</p>
+                            <span class="msg-time">12:07</span>
+                        </div>
+                        <div class="msg bubble-out">
+                            <p>Albatta, mobil telefon, planshet va desktop displeylariga to'liq moslashgan! 📱💻</p>
+                            <span class="msg-time">12:08</span>
+                        </div>
+                        <!-- Simulated interactive dynamic bubble -->
+                        <div class="msg bubble-in" id="dynamic-demo-msg" style="display: none;">
+                            <span class="msg-author">Dilshod</span>
+                            <p>Ajoyib natija! Endi loyihani backend bilan birlashtirishga tayyorlaymiz! 🎉</p>
+                            <span class="msg-time">Just now</span>
+                        </div>
+                    </div>
+                    <div class="chat-area-input-wrapper">
+                        <button class="attach-btn">📎</button>
+                        <input type="text" placeholder="Xabar yuborish..." id="demo-chat-input">
+                        <button class="send-btn" id="demo-chat-send">Yuborish</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer" id="about">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <div class="logo">
+                    <span class="logo-icon">💬</span>
+                    <span class="logo-text">Messger</span>
+                </div>
+                <p>Messger — zamonaviy texnologiyalar asosida qurilgan eng mukammal va xavfsiz chat ekotizimi.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Texnologiyalar</h4>
+                <ul>
+                    <li>HTML5 & CSS3</li>
+                    <li>Vanilla JavaScript</li>
+                    <li>TypeScript</li>
+                    <li>Django Web Framework</li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Loyiha Bosqichlari</h4>
+                <ul>
+                    <li>HTML/CSS Fundamentlari</li>
+                    <li>WebSocket Integratsiyasi</li>
+                    <li>React UI Implementatsiyasi</li>
+                    <li>Next.js Deploy</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 Messger. Barcha huquqlar himoyalangan. Loyiha ochiq kodli.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
