@@ -34,10 +34,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return refreshing;
     }
 
+    /* Deploy bilan mobil: config.js da API_BASE ko'rsatilgan bo'lsa,
+       REST so'rovlar o'sha backendga boradi ('' = same-origin). */
+    const API_BASE = (window.MESSGER && window.MESSGER.API_BASE) || '';
+    const mediaURL = (u) => (u && u.startsWith('/')) ? API_BASE + u : u;
+
     async function api(path, options = {}) {
         if (!store.access) throw new Error('no-token');
         const isForm = options.body instanceof FormData;
-        let res = await fetch(path, {
+        let res = await fetch(API_BASE + path, {
             ...options,
             headers: {
                 ...(isForm ? {} : { 'Content-Type': 'application/json' }),
@@ -200,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const initials = (name = '?') => escapeHTML(name.trim().charAt(0).toUpperCase() || '?');
 
     const avatarHTML = (user, size = 'md') => user && user.avatar
-        ? `<span class="avatar avatar--${size}" style="background-image:url('${escapeHTML(user.avatar)}');background-size:cover;background-position:center"></span>`
+        ? `<span class="avatar avatar--${size}" style="background-image:url('${escapeHTML(mediaURL(user.avatar))}');background-size:cover;background-position:center"></span>`
         : `<span class="avatar avatar--${size}">${initials((user && (user.display_name || user.username)) || '?')}</span>`;
 
     const chatColor = (chat) => {
@@ -241,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.profileStatus.textContent = me.is_online ? 'online' : 'offline';
         dom.railAvatar.outerHTML = `
             <span class="avatar avatar--sm" id="railAvatar"
-                  style="${me.avatar ? `background-image:url('${escapeHTML(me.avatar)}');background-size:cover;background-position:center` : ''}"
+                  style="${me.avatar ? `background-image:url('${escapeHTML(mediaURL(me.avatar))}');background-size:cover;background-position:center` : ''}"
                   title="${escapeHTML(name)}">${me.avatar ? '' : initials(name)}</span>`;
         dom.railAvatar = $('#railAvatar');
     }
@@ -469,7 +474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function attachmentHTML(a) {
         if (!a || !a.url) return '';
-        const url = a.url;
+        const url = mediaURL(a.url);
         const name = a.file_name || 'fayl';
         if (a.kind === 'image') return `<div class="bubble__media"><img src="${escapeHTML(url)}" alt="${escapeHTML(name)}" loading="lazy"></div>`;
         if (a.kind === 'video') return `<div class="bubble__media"><video src="${escapeHTML(url)}" controls preload="metadata"></video></div>`;
@@ -531,7 +536,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /* WebSocket */
-    const WS_BASE = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
+    const WS_BASE = (window.MESSGER && window.MESSGER.WS_BASE)
+        || (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
 
     function openSocket(chatId) {
         closeSocket();

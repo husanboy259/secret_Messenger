@@ -40,6 +40,7 @@ DEV_PAGES = (
     'messenger.html',
     'messenger.css',
     'messenger.js',
+    'config.js',
 )
 
 
@@ -67,6 +68,7 @@ urlpatterns = [
     path('messenger.html', dev_file, {'filename': 'messenger.html'}, name='messenger'),
     path('messenger.css', dev_file, {'filename': 'messenger.css'}),
     path('messenger.js', dev_file, {'filename': 'messenger.js'}),
+    path('config.js', dev_file, {'filename': 'config.js'}),
 
     path('admin/', admin.site.urls),
 

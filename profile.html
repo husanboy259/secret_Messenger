@@ -128,11 +128,15 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
         }
+
+        // Deploy bo'lsa config.js da API_BASE ko'rsatiladi, lokalda '' = same-origin
+        const API_BASE = (window.MESSGER && window.MESSGER.API_BASE) || '';
 
         // --- 1. Mobile menu toggle (navbar bilan bir xil) ---
         const menuToggle = document.getElementById('menu-toggle');
@@ -166,7 +170,7 @@
             const access = localStorage.getItem('access');
             if (access && refresh) {
                 try {
-                    await fetch('/api/auth/logout/', {
+                    await fetch(API_BASE + '/api/auth/logout/', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + access },
                         body: JSON.stringify({ refresh })
@@ -221,7 +225,7 @@
             const token = localStorage.getItem('access');
             if (!token) return;
             try {
-                const res = await fetch('/api/users/me/', { headers: { 'Authorization': 'Bearer ' + token } });
+                const res = await fetch(API_BASE + '/api/users/me/', { headers: { 'Authorization': 'Bearer ' + token } });
                 if (res.ok) {
                     user = await res.json();
                     localStorage.setItem('user', JSON.stringify(user));
@@ -270,7 +274,7 @@
                 status.style.color = 'var(--text-secondary)';
                 status.style.background = 'transparent';
                 try {
-                    const res = await fetch('/api/users/me/', {
+                    const res = await fetch(API_BASE + '/api/users/me/', {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',

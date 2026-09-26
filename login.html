@@ -74,6 +74,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'light') {
@@ -90,7 +91,8 @@
         }
 
         // Backend: POST /api/auth/login/ { username, password } -> { access, refresh, user, account_id }
-        const API_URL = 'http://127.0.0.1:8000/api/auth/login/';
+        // Deploy bo'lsa config.js da API_BASE ko'rsatiladi, lokalda '' = same-origin
+        const API_URL = ((window.MESSGER && window.MESSGER.API_BASE) || '') + '/api/auth/login/';
 
         const form = document.getElementById('login-form');
         const usernameInput = document.getElementById('username');
