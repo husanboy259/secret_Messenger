@@ -74,6 +74,7 @@ class ChatConsumer(BaseConsumer):
             await self.channel_layer.group_send(
                 self.group_name, {'type': 'chat.message', 'payload': message}
             )
+            await self.notify_message(self.chat_id, message)
 
         elif action == 'typing':
             await self.channel_layer.group_send(
@@ -153,6 +154,26 @@ class ChatConsumer(BaseConsumer):
             client_id=client_id,
         )
         return MessageSerializer(msg).data
+
+    @database_sync_to_async
+    def member_ids(self, chat_id):
+        """Chat a'zolari (yuboruvchidan tashqari) — global notification uchun."""
+        return list(
+            ChatMember.objects.filter(chat_id=chat_id)
+            .exclude(user_id=self.user.pk)
+            .values_list('user_id', flat=True)
+        )
+
+    async def notify_message(self, chat_id, message):
+        """Yangi xabar haqida chat a'zolarini global kanal orqali xabardor qiladi."""
+        for uid in await self.member_ids(chat_id):
+            await self.channel_layer.group_send(
+                f'user_{uid}',
+                {
+                    'type': 'notification',
+                    'payload': {'event': 'message.new', 'chat_id': chat_id, 'message': message},
+                },
+            )
 
     @database_sync_to_async
     def mark_read(self, message_id):

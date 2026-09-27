@@ -29,6 +29,28 @@ SYSTEM_FOLDERS = [
 ]
 
 
+def notify_message_created(chat, sender_id, message_data):
+    """Yangi xabar haqida chat a'zolarini global kanal (`user_<id>`) orqali ogohlantirish."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    for mid in chat.members.exclude(id=sender_id).values_list('id', flat=True):
+        async_to_sync(layer.group_send)(
+            f'user_{mid}',
+            {
+                'type': 'notification',
+                'payload': {
+                    'event': 'message.new',
+                    'chat_id': chat.id,
+                    'message': message_data,
+                },
+            },
+        )
+
+
 class UploadView(APIView):
     """
     POST /api/uploads/  (multipart: file=..., kind=image|video|audio|voice|file)
@@ -311,10 +333,9 @@ class ChatViewSet(viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         message = serializer.save(chat=chat, sender=request.user)
-        return Response(
-            MessageSerializer(message, context=self.get_serializer_context()).data,
-            status=status.HTTP_201_CREATED,
-        )
+        data = MessageSerializer(message, context=self.get_serializer_context()).data
+        notify_message_created(chat, request.user.pk, data)
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def _filter_messages(self, queryset, params):
         search = params.get('search')

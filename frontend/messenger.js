@@ -559,6 +559,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (state.socket) { state.socket.onclose = null; state.socket.close(); state.socket = null; }
     }
 
+    /* Global kanal — boshqa chatlarga kelgan xabarlar ro'yxatni jonli yangilaydi (server
+       `/ws/global/` orqali `user_<id>` kanaliga `message.new` yuboradi). */
+    let gsocket = null;
+    function openGlobalSocket() {
+        if (!store.access || gsocket) return;
+        try {
+            const ws = new WebSocket(`${WS_BASE}/ws/global/?token=${encodeURIComponent(store.access)}`);
+            gsocket = ws;
+            ws.onmessage = (e) => handleGlobal(JSON.parse(e.data));
+            ws.onclose = () => { gsocket = null; setTimeout(openGlobalSocket, 3000); };
+        } catch { /* muhim emas */ }
+    }
+
+    function handleGlobal(msg) {
+        if (!msg || msg.type !== 'notification' || !msg.data) return;
+        if (msg.data.event === 'message.new') onRemoteMessage(msg.data);
+    }
+
+    async function onRemoteMessage(p) {
+        const data = p.message;
+        if (!data || !p.chat_id) return;
+        if (data.sender && data.sender.id === state.me?.id) return;
+        if (p.chat_id === state.activeChatId) { upsertMessage(data); return; }
+
+        let chat = state.chats.find(c => c.id === p.chat_id);
+        if (!chat) {
+            try { chat = await apiJSON(`/api/chats/${p.chat_id}/`); }
+            catch { return; }
+            state.chats.unshift(chat);
+        }
+        const created = data.created_at || new Date().toISOString();
+        const last = {
+            content: data.content || mediaLabel(data) || '…',
+            sender: data.sender ? (data.sender.display_name || data.sender.username || '?') : '?',
+            created_at: created,
+        };
+        const oldT = chat.last_message ? Date.parse(chat.last_message.created_at) : 0;
+        if (!oldT || Date.parse(created) >= oldT) chat.last_message = last;
+        chat.unread_count = (chat.unread_count || 0) + 1;
+        renderChatList();
+    }
+
     function handleSocket(msg) {
         if (!msg) return;
         if (msg.type === 'message.new' && msg.data) {
@@ -894,10 +936,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!chat || !state.messages.length) return;
         const last = state.messages[state.messages.length - 1];
         if (!last.is_deleted) chat.last_message = {
-            content: last.content || mediaLabel(last),
+            content: last.content || mediaLabel(last) || '…',
             sender: last.sender ? last.sender.username : '?',
             created_at: last.created_at,
         };
+        renderChatList();
     }
 
     /* typing */
@@ -1606,6 +1649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch { state.folders = []; }
         renderRail();
         await loadChats();
+        openGlobalSocket();
     }
 
     boot();
