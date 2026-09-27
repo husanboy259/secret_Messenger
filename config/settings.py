@@ -64,6 +64,11 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     'http://localhost:8000,http://127.0.0.1:8000,http://localhost:5500,http://127.0.0.1:5500'
 ).split(',')
 
+# Vercel preview URL'lari ham ishlashi uchun (masalan: .*\.vercel\.app)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r for r in os.environ.get('CORS_ALLOWED_ORIGIN_REGEXES', '').split(',') if r.strip()
+]
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
