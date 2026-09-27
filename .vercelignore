@@ -1,0 +1,15 @@
+# Vercel faqat frontend statik fayllarni beradi — backend Faylni Render ishlaydi.
+# Quyidagilar Vercel deploy'iga KIRITILMAYDI (xavfsizlik: settings.py, db, kod):
+manage.py
+requirements.txt
+render.yaml
+config/
+accounts/
+chats/
+db.sqlite3
+media/
+__pycache__/
+*.py
+*.md
+ws_smoke_test.py
+*.log

@@ -45,11 +45,11 @@ DEV_PAGES = (
 
 
 def dev_file(request, filename):
-    """Loyiha ildigidagi frontend fayllarini beradi (faqat DEBUG=True da)."""
+    """frontend/ papkasidagi frontend fayllarini beradi (faqat DEBUG=True da)."""
     if not settings.DEBUG or filename not in DEV_PAGES:
         raise Http404('Sahifa topilmadi.')
 
-    target = settings.BASE_DIR / filename
+    target = settings.BASE_DIR / 'frontend' / filename
     if not target.is_file():
         raise Http404('Sahifa topilmadi.')
 
