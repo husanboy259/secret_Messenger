@@ -139,6 +139,8 @@ DATABASES = {
     }
 }
 
+import dj_database_url
+
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
 db_url = os.environ.get('DATABASE_URL', '').strip()
 if db_url:
