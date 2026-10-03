@@ -135,7 +135,19 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    } if os.environ.get('DB_ENGINE', 'sqlite3') == 'sqlite3' else {
+    }
+}
+
+# Use DATABASE_URL if provided (e.g., Supabase/Neon on Render)
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url  # noqa: F401
+    DATABASES['default'] = dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=os.environ.get('DJANGO_DB_SSL_REQUIRE', 'true').lower() == 'true'
+    )
+elif os.environ.get('DB_ENGINE', 'sqlite3') != 'sqlite3':
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'messger'),
         'USER': os.environ.get('DB_USER', 'messger'),
@@ -143,7 +155,6 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
-}
 
 
 # Password validation
