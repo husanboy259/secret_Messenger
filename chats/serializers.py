@@ -159,10 +159,7 @@ class MessageSerializer(serializers.ModelSerializer):
         ]
 
     def validate_content(self, value):
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError('Xabar bo\'sh bo\'lmasligi kerak.')
-        return value
+        return value.strip()
 
     def validate_reply_to(self, value):
         chat = self.context.get('chat') or getattr(self.instance, 'chat', None)
@@ -215,6 +212,7 @@ class ChatSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    my_role = serializers.SerializerMethodField()
     folder = serializers.PrimaryKeyRelatedField(
         queryset=Folder.objects.all(),
         allow_null=True,
@@ -244,6 +242,7 @@ class ChatSerializer(serializers.ModelSerializer):
             'pinned_message',
             'last_message',
             'unread_count',
+            'my_role',
             'created_at',
         ]
         read_only_fields = [
@@ -280,6 +279,12 @@ class ChatSerializer(serializers.ModelSerializer):
             .exclude(sender=user)
             .count()
         )
+
+    def get_my_role(self, obj):
+        member = ChatMember.objects.filter(
+            chat=obj, user_id=self.context['user'].pk
+        ).first()
+        return member.role if member else None
 
     def validate_member_ids(self, value):
         if not isinstance(value, list) or not value:

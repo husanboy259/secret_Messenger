@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         emojiGrid: $('#emojiGrid'),
         nightSwitch: $('#nightSwitch'),
         btnConvBack: $('#btnConvBack'),
+        btnConvMenu: $('#btnConvMenu'),
         toast: $('#toast'),
         railMe: $('#railMe'),
         railAvatar: $('.rail__me .avatar'),
@@ -426,12 +427,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             })()
             : '';
 
-        const media = msg.attachment_detail ? attachmentHTML(msg.attachment_detail) : '';
+        const media = !msg.is_deleted && msg.attachment_detail ? attachmentHTML(msg.attachment_detail) : '';
         const deleted = msg.is_deleted
             ? '<span class="bubble__text bubble--deleted">Bu xabar o\'chirildi</span>'
             : `<span class="bubble__text">${escapeHTML(msg.content)}</span>`;
 
-        const hasMedia = !!msg.attachment_detail;
+        const hasMedia = !msg.is_deleted && !!msg.attachment_detail;
 
         const reactions = (msg.reactions || []).length
             ? `<span class="bubble__reactions">${msg.reactions.map(r => {
@@ -443,6 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const edited = msg.is_edited ? '<span class="bubble__edited">edited</span>' : '';
         const err = msg._error ? '<span class="bubble__error">Yuborilmadi!</span>' : '';
+        const canDel = out || (activeChat() && activeChat().my_role === 'admin');
 
         return `
         <div class="msg msg--${out ? 'out' : 'in'}${tail}" data-msg-id="${msg.id || ''}" data-cid="${escapeHTML(msg.client_id || '')}">
@@ -456,10 +458,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${out ? `<span class="bubble__ticks ${msg.is_read ? 'is-read' : ''}">${icon('i-check', 'ico ico--xs' + (msg.is_read ? ' is-read' : ''))}</span>` : ''}
                 </span>
             </div>
-            ${out ? '' : `<span class="msg__tools">
+            ${msg.id ? `<span class="msg__tools">
                 <button type="button" data-act="react" title="Reaction">${icon('i-smile', 'ico ico--xs')}</button>
                 <button type="button" data-act="reply" title="Reply">${icon('i-reply', 'ico ico--xs')}</button>
-            </span>`}
+                ${canDel ? `<button type="button" data-act="del" title="O'chirish">${icon('i-trash', 'ico ico--xs')}</button>` : ''}
+            </span>` : ''}
         </div>`;
     }
 
@@ -575,6 +578,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleGlobal(msg) {
         if (!msg || msg.type !== 'notification' || !msg.data) return;
         if (msg.data.event === 'message.new') onRemoteMessage(msg.data);
+        else if (msg.data.event === 'chat.deleted') onChatDeleted(msg.data.chat_id);
+    }
+
+    function onChatDeleted(chatId) {
+        const idx = state.chats.findIndex(c => c.id === chatId);
+        if (idx >= 0) state.chats.splice(idx, 1);
+        if (state.activeChatId === chatId) {
+            state.activeChatId = null;
+            clearConv();
+        }
+        renderChatList();
     }
 
     async function onRemoteMessage(p) {
@@ -591,7 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const created = data.created_at || new Date().toISOString();
         const last = {
-            content: data.content || mediaLabel(data) || '…',
+            content: data.is_deleted ? 'Xabar o\'chirildi' : (data.content || mediaLabel(data) || '…'),
             sender: data.sender ? (data.sender.display_name || data.sender.username || '?') : '?',
             created_at: created,
         };
@@ -935,11 +949,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const chat = state.chats.find(c => c.id === chatId);
         if (!chat || !state.messages.length) return;
         const last = state.messages[state.messages.length - 1];
-        if (!last.is_deleted) chat.last_message = {
-            content: last.content || mediaLabel(last) || '…',
-            sender: last.sender ? last.sender.username : '?',
-            created_at: last.created_at,
-        };
+        chat.last_message = last.is_deleted
+            ? { content: 'Xabar o\'chirildi', sender: last.sender ? last.sender.username : '?', created_at: last.created_at }
+            : {
+                content: last.content || mediaLabel(last) || '…',
+                sender: last.sender ? last.sender.username : '?',
+                created_at: last.created_at,
+            };
         renderChatList();
     }
 
@@ -1169,6 +1185,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!btn || !msg) return;
         if (btn.dataset.act === 'reply') setReply(msg);
         if (btn.dataset.act === 'react') toggleReaction(msg);
+        if (btn.dataset.act === 'del') deleteMessage(msg);
+    });
+
+    async function deleteMessage(msg) {
+        if (!msg.id) return;
+        const removeLocal = () => {
+            msg.is_deleted = true;
+            msg.content = '';
+            msg.attachment_detail = null;
+            renderMessageList(false);
+            updateChatPreview(state.activeChatId);
+        };
+        if (state.socket && state.socket.readyState === 1) {
+            state.socket.send(JSON.stringify({ action: 'message.delete', message_id: msg.id }));
+            removeLocal();
+            return;
+        }
+        try {
+            await api(`/api/messages/${msg.id}/`, { method: 'DELETE' });
+            removeLocal();
+        } catch (err) {
+            toast('O\'chirilmadi: ' + fmtErr(err));
+        }
+    }
+
+    /* Conv header menyusi — chat / kanalni o'chirish */
+    let convMenuEl = null;
+    function closeConvMenu() {
+        if (convMenuEl) { convMenuEl.remove(); convMenuEl = null; }
+    }
+    function openConvMenu() {
+        const chat = activeChat();
+        if (!chat) return;
+        closeConvMenu();
+        const r = dom.btnConvMenu.getBoundingClientRect();
+        const label = chat.is_channel ? 'Kanalni o\'chirish' : 'Chatni o\'chirish';
+        convMenuEl = document.createElement('div');
+        convMenuEl.style.cssText = 'position:fixed;top:' + (r.bottom + 8) + 'px;right:16px;z-index:1300;min-width:230px;background:var(--panel,#fff);border:1px solid var(--line,#e4e8ec);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:2px;';
+        convMenuEl.innerHTML = `
+            <button type="button" data-cm="del" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:none;border-radius:10px;font:inherit;cursor:pointer;text-align:left;color:var(--danger,#e5484d);">${icon('i-trash', 'ico ico--sm')}<span>${label}</span></button>`;
+        document.body.appendChild(convMenuEl);
+        convMenuEl.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-cm]');
+            if (!b) return;
+            closeConvMenu();
+            if (b.dataset.cm === 'del') confirmDeleteChat(chat);
+        });
+    }
+    function confirmDeleteChat(chat) {
+        if (!confirm(`"${chat.title}" ${chat.is_channel ? 'kanali' : 'chati'} barcha uchun o'chirilsinmi?`)) return;
+        deleteChat(chat.id);
+    }
+    dom.btnConvMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (convMenuEl) closeConvMenu();
+        else openConvMenu();
+    });
+    document.addEventListener('click', (e) => {
+        if (convMenuEl && !convMenuEl.contains(e.target) && e.target !== dom.btnConvMenu) closeConvMenu();
     });
 
     function setReply(msg) {

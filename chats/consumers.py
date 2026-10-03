@@ -76,6 +76,14 @@ class ChatConsumer(BaseConsumer):
             )
             await self.notify_message(self.chat_id, message)
 
+        elif action == 'message.delete':
+            message = await self.delete_message(content)
+            if message is not None:
+                await self.channel_layer.group_send(
+                    self.group_name, {'type': 'chat.message', 'payload': message}
+                )
+                await self.notify_message(self.chat_id, message)
+
         elif action == 'typing':
             await self.channel_layer.group_send(
                 self.group_name,
@@ -174,6 +182,29 @@ class ChatConsumer(BaseConsumer):
                     'payload': {'event': 'message.new', 'chat_id': chat_id, 'message': message},
                 },
             )
+
+    @database_sync_to_async
+    def delete_message(self, content):
+        """Xabarni soft-delete qiladi; faqat muallifi yoki chat admini. Serializatsiyalangan
+        holatini qaytaradi (is_deleted=true), shunda broadcast'da hamma 'o'chirildi' ko'radi."""
+        mid = content.get('message_id')
+        if not mid:
+            return None
+        msg = Message.objects.filter(pk=mid, chat_id=self.chat_id).first()
+        if not msg:
+            return None
+        if msg.sender_id != self.user.pk:
+            is_admin = ChatMember.objects.filter(
+                chat_id=self.chat_id,
+                user_id=self.user.pk,
+                role=ChatMember.Role.ADMIN,
+            ).exists()
+            if not is_admin:
+                return None
+        msg.is_deleted = True
+        msg.content = ''
+        msg.save(update_fields=['is_deleted', 'content', 'updated_at'])
+        return MessageSerializer(msg).data
 
     @database_sync_to_async
     def mark_read(self, message_id):

@@ -51,6 +51,39 @@ def notify_message_created(chat, sender_id, message_data):
         )
 
 
+def broadcast_message_deleted(message):
+    """Xabar o'chirilganda ochiq chat oynalari va a'zolar global kanallarini yangilaydi."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    data = MessageSerializer(message).data
+    async_to_sync(layer.group_send)(
+        f'chat_{message.chat_id}', {'type': 'chat.message', 'payload': data}
+    )
+    notify_message_created(message.chat, message.sender_id, data)
+
+
+def notify_chat_deleted(chat):
+    """Chat/kanal o'chirilganda barcha a'zolar ro'yxatdan olib tashlashi uchun ogohlantirish."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    for mid in chat.members.values_list('id', flat=True):
+        async_to_sync(layer.group_send)(
+            f'user_{mid}',
+            {
+                'type': 'notification',
+                'payload': {'event': 'chat.deleted', 'chat_id': chat.id},
+            },
+        )
+
+
 class UploadView(APIView):
     """
     POST /api/uploads/  (multipart: file=..., kind=image|video|audio|voice|file)
@@ -267,6 +300,7 @@ class ChatViewSet(viewsets.ModelViewSet):
         member = ChatMember.objects.filter(chat=instance, user=self.request.user).first()
         if not member or member.role != ChatMember.Role.ADMIN:
             raise PermissionDenied('Faqat chat admini o\'chira oladi.')
+        notify_chat_deleted(instance)
         instance.delete()
 
     @action(detail=True, methods=['get', 'post'], url_path='members')
@@ -463,6 +497,7 @@ class MessageViewSet(viewsets.GenericViewSet):
         message.is_deleted = True
         message.content = ''
         message.save(update_fields=['is_deleted', 'content', 'updated_at'])
+        broadcast_message_deleted(message)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
