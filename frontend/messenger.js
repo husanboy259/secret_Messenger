@@ -603,9 +603,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             catch { return; }
             state.chats.unshift(chat);
         }
+        if (data.is_deleted) {
+            const np = chat.last_message
+                ? { ...chat.last_message }
+                : { content: 'Xabar o\'chirildi', sender: data.sender ? (data.sender.display_name || data.sender.username || '?') : '?', created_at: data.created_at || new Date().toISOString() };
+            if (np.id === undefined || np.id === data.id) chat.last_message = { id: data.id, content: 'Xabar o\'chirildi', sender: np.sender, created_at: np.created_at };
+            else chat.last_message = np;
+            renderChatList();
+            return;
+        }
         const created = data.created_at || new Date().toISOString();
         const last = {
-            content: data.is_deleted ? 'Xabar o\'chirildi' : (data.content || mediaLabel(data) || '…'),
+            id: data.id,
+            content: data.content || mediaLabel(data) || '…',
             sender: data.sender ? (data.sender.display_name || data.sender.username || '?') : '?',
             created_at: created,
         };
