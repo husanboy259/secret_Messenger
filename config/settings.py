@@ -147,12 +147,24 @@ DATABASES = {
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
 db_url = os.environ.get('DATABASE_URL') or ''
 db_url = db_url.strip()
-if dj_database_url and db_url and db_url.lower() not in ('', 'none'):
+# Supabase pooler URL'larida "?pgbouncer=true" / "?pgbouncer=1" bo'ladi;
+# psycopg3 uni conn option deb tushunib xato beradi — uni olib tashlaymiz.
+if 'pgbouncer=' in db_url:
+    head, sep, tail = db_url.partition('?')
+    params = [p for p in tail.split('&') if p and not p.startswith('pgbouncer=')]
+    db_url = head + (sep + '&'.join(params) if params else '')
+
+if dj_database_url and db_url:
     DATABASES['default'] = dj_database_url.config(
         default=db_url,
-        conn_max_age=600,
+        conn_max_age=0,
         ssl_require=os.environ.get('DJANGO_DB_SSL_REQUIRE', 'true').lower() == 'true',
     )
+    if db_url.find(':6543/') != -1:
+        DATABASES['default']['OPTIONS'] = {
+            **DATABASES['default'].get('OPTIONS', {}),
+            'options': '-c statement_cache_size=0',
+        }
 elif os.environ.get('DB_ENGINE') == 'postgresql':
     # Fallback to POSTGRES_* vars if set
     DATABASES['default'] = {
