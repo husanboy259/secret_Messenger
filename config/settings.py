@@ -18,7 +18,6 @@ try:
     import dj_database_url
 except ImportError:
     dj_database_url = None
-Keyin Database qismidagi importni o'chiramiz va shartni qo'shamiz.
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
 db_url = os.environ.get('DATABASE_URL', '').strip()
 if dj_database_url and db_url:
