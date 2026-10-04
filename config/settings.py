@@ -67,13 +67,19 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     o.rstrip('/') for o in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:8000,http://127.0.0.1:8000,http://localhost:5500,http://127.0.0.1:5500'
+        'http://localhost:8000,http://127.0.0.1:8000,http://localhost:5500,'
+        'http://127.0.0.1:5500,'
+        'https://messger-six.vercel.app,'
+        'https://secret-messenger-sepia-xi.vercel.app'
     ).split(',') if o.strip()
 ]
 
 # Vercel preview URL'lari ham ishlashi uchun (masalan: .*\.vercel\.app)
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r for r in os.environ.get('CORS_ALLOWED_ORIGIN_REGEXES', '').split(',') if r.strip()
+    r for r in os.environ.get(
+        'CORS_ALLOWED_ORIGIN_REGEXES',
+        r'^https://.*\.vercel\.app$'
+    ).split(',') if r.strip()
 ]
 
 ROOT_URLCONF = 'config.urls'
