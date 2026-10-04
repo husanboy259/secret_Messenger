@@ -145,8 +145,9 @@ DATABASES = {
 }
 
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
-db_url = os.environ.get('DATABASE_URL', '').strip()
-if dj_database_url and db_url:
+db_url = os.environ.get('DATABASE_URL') or ''
+db_url = db_url.strip()
+if dj_database_url and db_url and db_url.lower() not in ('', 'none'):
     DATABASES['default'] = dj_database_url.config(
         default=db_url,
         conn_max_age=600,
