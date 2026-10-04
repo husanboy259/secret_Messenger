@@ -14,6 +14,31 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+Keyin Database qismidagi importni o'chiramiz va shartni qo'shamiz.
+# Prefer DATABASE_URL if provided (Supabase/Postgres)
+db_url = os.environ.get('DATABASE_URL', '').strip()
+if dj_database_url and db_url:
+    DATABASES['default'] = dj_database_url.config(
+        default=db_url,
+        conn_max_age=600,
+        ssl_require=os.environ.get('DJANGO_DB_SSL_REQUIRE', 'true').lower() == 'true',
+    )
+elif os.environ.get('DB_ENGINE') == 'postgresql':
+    # Fallback to POSTGRES_* vars if set
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'messger'),
+        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'OPTIONS': {'sslmode': os.environ.get('POSTGRES_SSLMODE', 'require')},
+    }
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -143,7 +168,7 @@ import dj_database_url
 
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
 db_url = os.environ.get('DATABASE_URL', '').strip()
-if db_url:
+if dj_database_url and db_url:
     DATABASES['default'] = dj_database_url.config(
         default=db_url,
         conn_max_age=600,
@@ -160,7 +185,6 @@ elif os.environ.get('DB_ENGINE') == 'postgresql':
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         'OPTIONS': {'sslmode': os.environ.get('POSTGRES_SSLMODE', 'require')},
     }
-
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
