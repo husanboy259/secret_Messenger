@@ -18,16 +18,6 @@ try:
     import dj_database_url
 except ImportError:
     dj_database_url = None
-# Prefer DATABASE_URL if provided (Supabase/Postgres)
-db_url = os.environ.get('DATABASE_URL', '').strip()
-if dj_database_url and db_url:
-    DATABASES['default'] = dj_database_url.config(
-        default=db_url,
-        conn_max_age=600,
-        ssl_require=os.environ.get('DJANGO_DB_SSL_REQUIRE', 'true').lower() == 'true',
-    )
-elif os.environ.get('DB_ENGINE') == 'postgresql':
-    # Fallback to POSTGRES_* vars if set
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('POSTGRES_DB', 'messger'),
@@ -162,8 +152,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-import dj_database_url
 
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
 db_url = os.environ.get('DATABASE_URL', '').strip()
