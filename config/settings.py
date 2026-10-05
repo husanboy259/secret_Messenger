@@ -15,6 +15,14 @@ from datetime import timedelta
 from pathlib import Path
 
 try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
+
+load_dotenv(Path(__file__).resolve().parent.parent / '.env')
+
+try:
     import dj_database_url
 except ImportError:
     dj_database_url = None
@@ -151,8 +159,7 @@ DATABASES = {
 }
 
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
-db_url = os.environ.get('DATABASE_URL') or ''
-db_url = db_url.strip()
+db_url = (os.environ.get('DIRECT_URL') or os.environ.get('DATABASE_URL') or '').strip()
 # Supabase pooler URL'larida "?pgbouncer=true" / "?pgbouncer=1" bo'ladi;
 # psycopg3 uni conn option deb tushunib xato beradi — uni olib tashlaymiz.
 if 'pgbouncer=' in db_url:
