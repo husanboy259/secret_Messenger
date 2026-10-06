@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -166,6 +167,12 @@ if 'pgbouncer=' in db_url:
     head, sep, tail = db_url.partition('?')
     params = [p for p in tail.split('&') if p and not p.startswith('pgbouncer=')]
     db_url = head + (sep + '&'.join(params) if params else '')
+
+# Supabase URL'larida host atrofida "[...]" bo'lishi mumkin. Python 3.14 urllib
+# buni IPv6 deb hisoblab xato beradi — nomdagi keraksiz kvadratlarni olib tashlaymiz.
+m = re.search(r'\[(?P<host>[^\]\s]+)\]', db_url)
+if m and '.' in m.group('host'):
+    db_url = db_url[:m.start()] + m.group('host') + db_url[m.end():]
 
 if dj_database_url and db_url:
     DATABASES['default'] = dj_database_url.config(
