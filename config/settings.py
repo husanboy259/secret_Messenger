@@ -160,7 +160,11 @@ DATABASES = {
 }
 
 # Prefer DATABASE_URL if provided (Supabase/Postgres)
-db_url = (os.environ.get('DIRECT_URL') or os.environ.get('DATABASE_URL') or '').strip()
+# DJANGO_DB_BACKEND=sqlite3 — remote DB'ni chetlab, mahalliy sqlite ishlatadi
+# (testlarni tez yuritish uchun).
+db_url = ''
+if os.environ.get('DJANGO_DB_BACKEND', '').lower() not in ('sqlite3', 'sqlite'):
+    db_url = (os.environ.get('DIRECT_URL') or os.environ.get('DATABASE_URL') or '').strip()
 # Supabase pooler URL'larida "?pgbouncer=true" / "?pgbouncer=1" bo'ladi;
 # psycopg3 uni conn option deb tushunib xato beradi — uni olib tashlaymiz.
 if 'pgbouncer=' in db_url:

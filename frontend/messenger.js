@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         socket: null,
         pending: new Map(),      // client_id -> true (optimistik xabarlar)
         pendingAttachment: null, // upload qilingan attachment optimistik xabar uchun
+        pendingVoiceBlob: null,  // WS orqali yuboriladigan ovoz fayli (Blob)
     };
 
     const dom = {
@@ -635,7 +636,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderMessageList(false);
         } else if (msg.type === 'call.signal' && msg.data) {
             handleCallSignal(msg.data);
+        } else if (msg.type === 'error') {
+            if (msg.client_id) markFailed(msg.client_id);
+            toast(msg.detail || 'Xatolik yuz berdi.');
         }
+        // 'voice.ready' — server qabul qilganini bildiradi, UI'da alohida ko'rsatilmaydi
     }
 
     /* ─────────────────────────────────────────────────────────────────────
@@ -1015,9 +1020,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function sendMessage() {
         const text = dom.messageInput.value.trim();
         const attachment = state.pendingAttachment || null;
+        const voiceBlob = state.pendingVoiceBlob;
         if (!text && !attachment) return;
         const chat = state.chats.find(c => c.id === state.activeChatId);
-        if (!chat) return;
+        if (!chat) {
+            // Yuborib bo'lmadi — pending holatini tozalaymiz, aks holda keyingi
+            // xabarga eski ovoz/fayl biriktirilib qoladi.
+            state.pendingAttachment = null;
+            state.pendingVoiceBlob = null;
+            return;
+        }
 
         const clientId = crypto.randomUUID();
         const optimistic = {
@@ -1048,8 +1060,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const replyTo = state.replyTo ? state.replyTo.id : null;
         state.replyTo = null;
+        state.pendingVoiceBlob = null;
 
-        // 1) WebSocket orqali (server saqlaydi va guruhga broadcast qiladi)
+        // 1) Ovozli xabar — to'g'ridan-to'g'ri WebSocket binary kadr sifatida
+        if (voiceBlob && state.socket && state.socket.readyState === 1) {
+            try {
+                state.socket.send(JSON.stringify({
+                    action: 'voice.begin',
+                    client_id: clientId,
+                    text,
+                    reply_to: replyTo,
+                    mime: voiceBlob.type || 'audio/webm',
+                    duration: optimistic.attachment_detail ? optimistic.attachment_detail.duration : 0,
+                }));
+                state.socket.send(await voiceBlob.arrayBuffer());
+            } catch {
+                markFailed(clientId);
+                toast('Ovoz yuborilmadi.');
+            }
+            return;
+        }
+
+        // 2) WebSocket orqali (server saqlaydi va guruhga broadcast qiladi)
         if (state.socket && state.socket.readyState === 1) {
             state.socket.send(JSON.stringify({
                 action: 'message.create', text, reply_to: replyTo, client_id: clientId,
@@ -1057,18 +1089,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             }));
             return;
         }
-        // 2) WS bo'lmasa REST zaxira
+        // 3) WS bo'lmasa REST zaxira (ovoz bo'lsa — avval yuklash)
+        let restAttachment = attachment;
+        if (voiceBlob) {
+            try {
+                restAttachment = await uploadAttachment(
+                    new File([voiceBlob], 'voice.webm', { type: voiceBlob.type }), 'voice'
+                );
+            } catch (err) {
+                markFailed(clientId);
+                toast('Yuklanmadi: ' + fmtErr(err));
+                return;
+            }
+        }
         try {
             const created = await apiJSON(`/api/chats/${chat.id}/messages/`, {
                 method: 'POST',
-                body: JSON.stringify({ content: text, reply_to: replyTo, client_id: clientId, attachment: attachment ? attachment.id : null }),
+                body: JSON.stringify({ content: text, reply_to: replyTo, client_id: clientId, attachment: restAttachment ? restAttachment.id : null }),
             });
             upsertMessage({ ...created, client_id: clientId });
         } catch (err) {
-            optimistic._error = true;
-            renderMessageList(false);
+            markFailed(clientId);
             toast('Yuborilmadi: ' + fmtErr(err));
         }
+    }
+
+    function markFailed(clientId) {
+        const m = state.messages.find(x => x.client_id === clientId);
+        if (!m) return;
+        m._error = true;
+        const el = document.querySelector(`[data-cid="${clientId}"]`);
+        if (el) el.outerHTML = messageHTML(m, null);
     }
 
     /* Biriktirish (clip) va ovozli xabar */
@@ -1135,9 +1186,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             recorder.onstop = async () => {
                 const blob = new Blob(recChunks, { type: recorder.mimeType || 'audio/webm' });
                 stream.getTracks().forEach(t => t.stop());
+                const seconds = recSeconds;
                 hideRecBar();
                 if (!blob.size) { toast('Ovoz yozilmadi.'); return; }
                 try {
+                    // WS ochiq bo'lsa — ovoz to'g'ridan-to'g'ri socket binary kadr
+                    // sifatida yuboriladi (REST upload'siz).
+                    if (state.socket && state.socket.readyState === 1) {
+                        state.pendingVoiceBlob = blob;
+                        state.pendingAttachment = {
+                            id: null,
+                            kind: 'voice',
+                            url: URL.createObjectURL(blob),
+                            file_name: 'voice.webm',
+                            mime_type: blob.type,
+                            size: blob.size,
+                            duration: seconds,
+                        };
+                        sendMessage();
+                        return;
+                    }
                     const att = await uploadAttachment(new File([blob], 'voice.webm', { type: blob.type }), 'voice');
                     state.pendingAttachment = att;
                     sendMessage();

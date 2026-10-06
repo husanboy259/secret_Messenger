@@ -1,10 +1,31 @@
+import logging
 from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-from chats.models import Chat, ChatMember, Message, ReadReceipt
+from chats.models import Attachment, Chat, ChatMember, Message, ReadReceipt
 from chats.serializers import MessageSerializer
+
+logger = logging.getLogger(__name__)
+
+# Ovozli xabar uchun cheklov: brauzer yozgan webm/m4a fayli odatda bir necha MB.
+VOICE_MAX_BYTES = 8 * 1024 * 1024
+VOICE_EXT = {
+    'audio/webm': 'webm',
+    'audio/ogg': 'ogg',
+    'audio/mp4': 'm4a',
+    'audio/mpeg': 'mp3',
+    'audio/wav': 'wav',
+}
+
+
+def _as_int(value):
+    try:
+        n = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return n if 0 < n < 86400 else None
 
 
 class TokenAuthMixin:
@@ -51,6 +72,7 @@ class ChatConsumer(BaseConsumer):
             return
 
         self.group_name = f'chat_{self.chat_id}'
+        self._voice_meta = None
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
         await self.send_json({'type': 'connected', 'chat_id': self.chat_id})
@@ -62,10 +84,38 @@ class ChatConsumer(BaseConsumer):
         if getattr(self, 'user', None):
             await self.mark_presence(False)
 
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        # Ovozli xabar: avval voice.begin (matn), keyin bitta binary kadr.
+        if bytes_data is not None:
+            await self.receive_voice(bytes_data)
+            return
+        if not text_data:
+            return
+        await super().receive(text_data=text_data, bytes_data=None, **kwargs)
+
     async def receive_json(self, content, **kwargs):
+        if not isinstance(content, dict):
+            await self.send_json(
+                {'type': 'error', 'code': 'invalid', 'detail': "Noto'g'ri format."}
+            )
+            return
         action = content.get('action')
 
-        if action == 'message.create':
+        if action == 'voice.begin':
+            # Meta ma'lumotlari keyingi binary kadr uchun saqlanadi.
+            self._voice_meta = {
+                'client_id': content.get('client_id') or '',
+                'text': (content.get('text') or '').strip(),
+                'reply_to': content.get('reply_to'),
+                'mime': (content.get('mime') or '').strip().lower(),
+                'duration': _as_int(content.get('duration')),
+            }
+            await self.send_json({
+                'type': 'voice.ready',
+                'client_id': self._voice_meta['client_id'],
+            })
+
+        elif action == 'message.create':
             message = await self.create_message(content)
             if message is None:
                 return await self.send_json(
@@ -112,6 +162,89 @@ class ChatConsumer(BaseConsumer):
                 self.group_name,
                 {'type': 'chat.call_signal', 'payload': payload},
             )
+
+    # --- ovozli xabar (binary frame) ---
+    async def receive_voice(self, data):
+        meta = self._voice_meta
+        self._voice_meta = None
+
+        if meta is None:
+            await self.send_json({
+                'type': 'error', 'code': 'voice',
+                'detail': "Avval voice.begin yuborilishi kerak.",
+            })
+            return
+        if not data:
+            await self._voice_error(meta['client_id'], "Ovoz fayli bo'sh.")
+            return
+        if len(data) > VOICE_MAX_BYTES:
+            await self._voice_error(meta['client_id'], "Fayl juda katta (8 MB gacha).")
+            return
+
+        message = None
+        try:
+            message = await self.save_voice(data, meta)
+        except Exception:
+            logger.exception("Ovozli xabar saqlashda xato (chat=%s)", self.chat_id)
+        if message is None:
+            await self._voice_error(meta['client_id'], "Ovozli xabar saqlanmadi.")
+            return
+
+        await self.channel_layer.group_send(
+            self.group_name, {'type': 'chat.message', 'payload': message}
+        )
+        await self.notify_message(self.chat_id, message)
+
+    async def _voice_error(self, client_id, detail):
+        await self.send_json(
+            {'type': 'error', 'code': 'voice', 'client_id': client_id, 'detail': detail}
+        )
+
+    @database_sync_to_async
+    def save_voice(self, data, meta):
+        from uuid import uuid4
+
+        from django.core.files.base import ContentFile
+
+        client_id = meta.get('client_id') or ''
+        if client_id:
+            existing = Message.objects.filter(
+                sender=self.user, client_id=client_id
+            ).first()
+            if existing:
+                return MessageSerializer(existing).data
+
+        chat = Chat.objects.filter(pk=self.chat_id).first()
+        if not chat:
+            return None
+
+        # Reply faqat shu chatdagi xabarga bo'lishi mumkin.
+        reply_id = meta.get('reply_to')
+        if reply_id and not Message.objects.filter(pk=reply_id, chat_id=self.chat_id).exists():
+            reply_id = None
+
+        mime = meta.get('mime') or ''
+        ext = VOICE_EXT.get(mime, 'webm' if not mime or '/' not in mime else mime.split('/')[-1][:8])
+        att = Attachment(
+            kind=Attachment.Kind.VOICE,
+            mime_type=mime or 'audio/webm',
+            size=len(data),
+            file_name=f'voice.{ext}',
+            duration=meta.get('duration') or None,
+        )
+        att.file.save(f'voice_{uuid4().hex}.{ext}', ContentFile(data), save=False)
+        att.save()
+
+        return MessageSerializer(
+            Message.objects.create(
+                chat=chat,
+                sender=self.user,
+                content=meta.get('text') or '',
+                reply_to_id=reply_id,
+                attachment=att,
+                client_id=client_id,
+            )
+        ).data
 
     # --- group event handlers ---
     async def chat_message(self, event):

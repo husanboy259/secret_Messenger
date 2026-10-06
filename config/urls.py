@@ -1,10 +1,10 @@
 import mimetypes
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import FileResponse, Http404
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -87,6 +87,13 @@ urlpatterns = [
     path('api/', include(router.urls)),
 ]
 
-if settings.DEBUG:
-    # Yuklangan media fayllar (attachments/) — faqat DEBUG rejimida.
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media fayllar (audio / rasm / video) production'da ham ochiq bo'lishi shart —
+# aks holda ovozli xabarlar 404 bo'lib eshitilmaydi. document_root dynamic
+# o'qiladi, shunda override_settings (testlar) ham ishlaydi.
+def media_serve(request, path):
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', media_serve, name='media'),
+]
