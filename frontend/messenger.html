@@ -6,7 +6,7 @@
     <title>Messger — Desktop</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="messenger.css">
 </head>
 <body>
@@ -411,6 +411,42 @@
 
         <footer class="modal__foot">
             <button class="btn btn--primary" id="folderCreate" type="button">Yaratish</button>
+        </footer>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MEMBERS / ADMINS MODAL — guruh va kanal a'zolari, admin boshqaruvi
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="membersModal" role="dialog" aria-modal="true" aria-labelledby="membersTitle" hidden>
+    <div class="modal__card">
+        <header class="modal__head">
+            <div>
+                <h2 class="modal__title" id="membersTitle">A'zolar va adminlar</h2>
+                <p class="modal__sub" id="membersSub">Kanalga faqat adminlar yoza oladi</p>
+            </div>
+            <button class="icon-btn" type="button" data-close="#membersModal" aria-label="Yopish">
+                <svg class="ico"><use href="#i-close"/></svg>
+            </button>
+        </header>
+
+        <div class="modal__body modal__body--scroll">
+            <div class="members" id="membersList"></div>
+
+            <div class="members-add" id="membersAddArea" hidden>
+                <div class="field">
+                    <label class="field__label" for="membersAddSearch">Foydalanuvchini qidirish va admin qilish</label>
+                    <div class="search search--modal">
+                        <svg class="ico search__ico"><use href="#i-search"/></svg>
+                        <input type="search" id="membersAddSearch" placeholder="@username yoki email" autocomplete="off">
+                    </div>
+                </div>
+                <div class="add-results" id="membersAddResults"></div>
+            </div>
+        </div>
+
+        <footer class="modal__foot" id="membersFoot" hidden>
+            <button class="btn btn--primary" id="membersAdd" type="button">Admin qo'shish</button>
         </footer>
     </div>
 </div>

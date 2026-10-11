@@ -111,13 +111,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# WebSocket uchun xotira ichidagi kanal qatlami. Ko'p server ishga tushgandan keyin
-# Redis'ga o'tadi (ROADMAP_BACKEND.md 9-bosqich).
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+# WebSocket kanal qatlami: ko'p worker/process'lar uchun Redis ishlatiladi,
+# yo'q bo'lsa xotira ichidagi (bitta process) qatlam ishlaydi.
+if os.environ.get('REDIS_URL'):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [os.environ['REDIS_URL']]},
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 

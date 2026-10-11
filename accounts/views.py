@@ -36,6 +36,9 @@ class RegisterView(generics.CreateAPIView):
         user.last_seen = timezone.now()
         user.save(update_fields=['last_seen'])
         LoginSerializer.ensure_account(user)
+        from chats.bot import ensure_support_chat
+
+        ensure_support_chat(user)
 
         refresh = RefreshToken.for_user(user)
         return Response(

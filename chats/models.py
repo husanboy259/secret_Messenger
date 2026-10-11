@@ -111,6 +111,18 @@ class Chat(models.Model):
     def last_message(self):
         return self.messages.order_by('-created_at').first()
 
+    def is_admin(self, user_id):
+        return ChatMember.objects.filter(
+            chat=self, user_id=user_id, role=ChatMember.Role.ADMIN
+        ).exists()
+
+    def can_post(self, user_id):
+        """Kanalga faqat admin (yani creator va u tasdiqlagan adminlar) yoza oladi;
+        guruh va 1:1 suhbatlarda barcha a'zolar yoza oladi."""
+        if not self.is_channel:
+            return True
+        return self.is_admin(user_id)
+
 
 class ChatMember(models.Model):
     """A'zo ro'yxati. Guruhda rol va oxirgi o'qilgan xabar saqlanadi."""

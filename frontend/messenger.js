@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         pending: new Map(),      // client_id -> true (optimistik xabarlar)
         pendingAttachment: null, // upload qilingan attachment optimistik xabar uchun
         pendingVoiceBlob: null,  // WS orqali yuboriladigan ovoz fayli (Blob)
+        membersChat: null,       // Adminlar modali ochiq bo'lgan chat
     };
 
     const dom = {
@@ -122,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         messageList: $('#messageList'),
         messageInput: $('#messageInput'),
         btnSend: $('#btnSend'),
+        composer: $('#composer'),
         replyBar: $('#replyBar'),
         replyText: $('#replyText'),
         replyCancel: $('#replyCancel'),
@@ -169,6 +171,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         folderName: $('#folderName'),
         folderIcons: $('#folderIcons'),
         folderCreate: $('#folderCreate'),
+        membersModal: $('#membersModal'),
+        membersTitle: $('#membersTitle'),
+        membersSub: $('#membersSub'),
+        membersList: $('#membersList'),
+        membersFoot: $('#membersFoot'),
+        membersAdd: $('#membersAdd'),
         btnCallVoice: $('#btnCallVoice'),
         btnCallVideo: $('#btnCallVideo'),
         callOverlay: $('#callOverlay'),
@@ -537,6 +545,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadMessages();
         openSocket(chat.id);
         markChatRead(chat.id);
+        applyComposerPermission(chat);
+        dom.btnCallVoice.hidden = !!chat.is_bot;
+        dom.btnCallVideo.hidden = !!chat.is_bot;
+    }
+
+    /* Kanalda faqat adminlar yozadi — qolganlar uchun composer read-only. */
+    function applyComposerPermission(chat) {
+        const canWrite = !(chat.is_channel && chat.my_role !== 'admin');
+        dom.composer.classList.toggle('is-readonly', !canWrite);
+        dom.messageInput.disabled = !canWrite;
+        dom.messageInput.placeholder = canWrite
+            ? 'Message'
+            : 'Kanalga faqat adminlar yoza oladi';
+        dom.btnSend.hidden = !canWrite;
+        dom.btnMic.hidden = !canWrite;
+        dom.btnClip.hidden = !canWrite;
     }
 
     /* WebSocket */
@@ -580,6 +604,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!msg || msg.type !== 'notification' || !msg.data) return;
         if (msg.data.event === 'message.new') onRemoteMessage(msg.data);
         else if (msg.data.event === 'chat.deleted') onChatDeleted(msg.data.chat_id);
+        else if (msg.data.event === 'chat.updated') onChatUpdated(msg.data.chat_id);
     }
 
     function onChatDeleted(chatId) {
@@ -590,6 +615,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearConv();
         }
         renderChatList();
+    }
+
+    async function onChatUpdated(chatId) {
+        const idx = state.chats.findIndex(c => c.id === chatId);
+        if (idx < 0) return;
+        try {
+            const chat = await apiJSON(`/api/chats/${chatId}/`);
+            state.chats[idx] = chat;
+            renderChatList();
+            if (state.activeChatId === chatId) {
+                const h = headerHTML(chat);
+                dom.convTitle.textContent = h.title;
+                dom.convStatus.textContent = h.status;
+                applyComposerPermission(chat);
+            }
+            if (state.membersChat === chatId && !dom.membersModal.hidden) loadMembers();
+        } catch { /* keyingi yuklashda yangilanadi */ }
     }
 
     async function onRemoteMessage(p) {
@@ -636,6 +678,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderMessageList(false);
         } else if (msg.type === 'call.signal' && msg.data) {
             handleCallSignal(msg.data);
+        } else if (msg.type === 'chat.updated' && msg.data && msg.data.chat_id) {
+            onChatUpdated(msg.data.chat_id);
         } else if (msg.type === 'error') {
             if (msg.client_id) markFailed(msg.client_id);
             toast(msg.detail || 'Xatolik yuz berdi.');
@@ -1030,6 +1074,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             state.pendingVoiceBlob = null;
             return;
         }
+        if (chat.is_channel && chat.my_role !== 'admin') {
+            state.pendingAttachment = null;
+            state.pendingVoiceBlob = null;
+            toast('Kanalga faqat adminlar yoza oladi.');
+            return;
+        }
 
         const clientId = crypto.randomUUID();
         const optimistic = {
@@ -1302,13 +1352,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         convMenuEl = document.createElement('div');
         convMenuEl.style.cssText = 'position:fixed;top:' + (r.bottom + 8) + 'px;right:16px;z-index:1300;min-width:230px;background:var(--panel,#fff);border:1px solid var(--line,#e4e8ec);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:2px;';
         convMenuEl.innerHTML = `
+            <button type="button" data-cm="admins" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:none;border-radius:10px;font:inherit;cursor:pointer;text-align:left;color:var(--text,#000);">${icon('i-group', 'ico ico--sm')}<span>Adminlar / a'zolar</span></button>
             <button type="button" data-cm="del" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:none;border-radius:10px;font:inherit;cursor:pointer;text-align:left;color:var(--danger,#e5484d);">${icon('i-trash', 'ico ico--sm')}<span>${label}</span></button>`;
         document.body.appendChild(convMenuEl);
         convMenuEl.addEventListener('click', (e) => {
             const b = e.target.closest('[data-cm]');
             if (!b) return;
             closeConvMenu();
-            if (b.dataset.cm === 'del') confirmDeleteChat(chat);
+            if (b.dataset.cm === 'admins') openMembersModal(chat);
+            else if (b.dataset.cm === 'del') confirmDeleteChat(chat);
         });
     }
     function confirmDeleteChat(chat) {
@@ -1322,6 +1374,137 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.addEventListener('click', (e) => {
         if (convMenuEl && !convMenuEl.contains(e.target) && e.target !== dom.btnConvMenu) closeConvMenu();
+    });
+
+    /* Adminlar / a'zolar modali — kanal va guruhda admin boshqaruvi */
+    async function openMembersModal(chat) {
+        state.membersChat = chat.id;
+        dom.membersTitle.textContent = chat.is_channel ? 'Kanal adminlari' : "A'zolar va adminlar";
+        dom.membersSub.textContent = chat.is_channel
+            ? 'Kanalga faqat adminlar yoza oladi'
+            : `Admin (${chat.my_role === 'admin' ? 'siz' : 'faqat adminlar'}) a'zolarni admin qila oladi`;
+        dom.membersModal.hidden = false;
+        await loadMembers();
+    }
+
+    async function loadMembers() {
+        if (!state.membersChat) return;
+        try {
+            const list = await apiJSON(`/api/chats/${state.membersChat}/members/`);
+            renderMembers(list);
+        } catch (err) {
+            dom.membersList.innerHTML = `<p class="add-none">Yuklanmadi: ${escapeHTML(fmtErr(err))}</p>`;
+        }
+    }
+
+    function renderMembers(list) {
+        const chat = state.chats.find(c => c.id === state.membersChat);
+        const meAdmin = !!chat && chat.my_role === 'admin';
+        const ownerId = chat && chat.created_by ? chat.created_by.id : null;
+        dom.membersFoot.hidden = !meAdmin;
+        dom.membersList.innerHTML = list.map(m => {
+            const u = m.user || {};
+            const name = escapeHTML(u.display_name || u.username || '?');
+            const isMe = u.id === state.me?.id;
+            const isCreator = ownerId !== null && u.id === ownerId;
+            const badge = isCreator
+                ? '<span class="member-badge member-badge--owner">Ega</span>'
+                : m.role === 'admin'
+                    ? '<span class="member-badge">Admin</span>'
+                    : '';
+            let act = '';
+            if (meAdmin && !isMe && !isCreator) {
+                act = m.role === 'admin'
+                    ? `<button type="button" class="member-act" data-uid="${u.id}" data-role="member">Cheklash</button>`
+                    : `<button type="button" class="member-act member-act--add" data-uid="${u.id}" data-role="admin">Admin qilish</button>`;
+            } else if (isMe) {
+                act = '<span class="member-act member-act--me">(' + (m.role === 'admin' ? 'Admin' : 'Ishtirokchi') + ')</span>';
+            }
+            return `
+            <div class="member-row">
+                ${avatarHTML(u, 'sm')}
+                <span class="member-meta">
+                    <span class="member-name">${name}${isMe ? ' <em>(siz)</em>' : ''}</span>
+                    <span class="member-sub">@${escapeHTML(u.username || '')}</span>
+                </span>
+                <span class="member-side">${badge}</span>
+                ${act}
+            </div>`;
+        }).join('') || '<p class="add-none">A\'zolar yo\'q.</p>';
+    }
+
+    dom.membersList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.member-act[data-uid]');
+        if (!btn || btn.disabled) return;
+        const uid = btn.dataset.uid;
+        const role = btn.dataset.role;
+        btn.disabled = true;
+        try {
+            await apiJSON(`/api/chats/${state.membersChat}/members/${uid}/role/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ role }),
+            });
+            toast(role === 'admin' ? 'Admin qilindi ✓' : 'Adminlikdan cheklandi');
+            await loadMembers();
+            const idx = state.chats.findIndex(c => c.id === state.membersChat);
+            if (idx >= 0) {
+                try { state.chats[idx] = await apiJSON(`/api/chats/${state.membersChat}/`); }
+                catch { /* ro'yxatni keyingi yuklashda yangilanadi */ }
+                if (state.activeChatId === state.membersChat) applyComposerPermission(state.chats[idx]);
+            }
+        } catch (err) {
+            toast('O\'zgarmadi: ' + fmtErr(err));
+        } finally {
+            if (btn.isConnected) btn.disabled = false;
+        }
+    });
+
+    /* «Admin qo'shish» — yangi foydalanuvchini qidirib, admin qilib qo'shish */
+    dom.membersAdd.addEventListener('click', () => {
+        const area = $('#membersAddArea');
+        area.hidden = !area.hidden;
+        if (!area.hidden) $('#membersAddSearch').focus();
+    });
+    let membersSearchTimer;
+    $('#membersAddSearch').addEventListener('input', (e) => {
+        clearTimeout(membersSearchTimer);
+        const q = e.target.value.trim();
+        membersSearchTimer = setTimeout(async () => {
+            const res = $('#membersAddResults');
+            if (!q) { res.innerHTML = ''; return; }
+            try {
+                const data = await apiJSON(`/api/users/?search=${encodeURIComponent(q)}`);
+                const users = data.results || (Array.isArray(data) ? data : []);
+                res.innerHTML = users.map(u => `
+                    <button class="user-row" data-add-admin="${u.id}" data-name="${escapeHTML(u.display_name || u.username)}" type="button">
+                        ${avatarHTML(u, 'md')}
+                        <span class="user-row__body">
+                            <span class="user-row__name">${escapeHTML(u.display_name || u.username)}</span>
+                            <span class="user-row__sub">@${escapeHTML(u.username)}</span>
+                        </span>
+                        <span class="user-row__act">${icon('i-plus', 'ico')}</span>
+                    </button>`).join('') || '<p class="add-none">Topilmadi.</p>';
+            } catch { res.innerHTML = '<p class="add-none">Xatolik yuz berdi.</p>'; }
+        }, 250);
+    });
+    $('#membersAddResults').addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-add-admin]');
+        if (!b || b.disabled) return;
+        b.disabled = true;
+        try {
+            await apiJSON(`/api/chats/${state.membersChat}/members/`, {
+                method: 'POST',
+                body: JSON.stringify({ user_ids: [Number(b.dataset.addAdmin)], role: 'admin' }),
+            });
+            toast(`${b.dataset.name || 'Foydalanuvchi'} admin qilindi ✓`);
+            $('#membersAddSearch').value = '';
+            $('#membersAddResults').innerHTML = '';
+            $('#membersAddArea').hidden = true;
+            await loadMembers();
+        } catch (err) {
+            toast('Qo\'shilmadi: ' + fmtErr(err));
+            b.disabled = false;
+        }
     });
 
     function setReply(msg) {
@@ -1747,7 +1930,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') {
             if (!dom.emojiPop.hidden) { dom.emojiPop.hidden = true; return; }
             if (isDrawerOpen()) return setDrawer(false);
-            if (!dom.addModal.hidden) return dom.addModal.hidden = true;
+            [dom.addModal, dom.contactsModal, dom.folderModal, dom.membersModal].forEach(m => {
+                if (!m.hidden) { m.hidden = true; state.membersChat = null; }
+            });
         }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
@@ -1783,8 +1968,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     dom.modalClose.forEach(b => b.addEventListener('click', () => {
         $(b.dataset.close).hidden = true;
     }));
-    [dom.addModal, dom.contactsModal].forEach(m => m.addEventListener('click', (e) => {
-        if (e.target === m) m.hidden = true;
+    [dom.addModal, dom.contactsModal, dom.folderModal, dom.membersModal].forEach(m => m.addEventListener('click', (e) => {
+        if (e.target === m) { m.hidden = true; state.membersChat = null; }
     }));
     dom.btnAddChat.addEventListener('click', () => openAddChat('private'));
 

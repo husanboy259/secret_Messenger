@@ -116,6 +116,12 @@ class ChatConsumer(BaseConsumer):
             })
 
         elif action == 'message.create':
+            if not await self.can_post():
+                return await self.send_json({
+                    'type': 'error',
+                    'code': 'forbidden',
+                    'detail': 'Kanalga faqat adminlar yoza oladi.',
+                })
             message = await self.create_message(content)
             if message is None:
                 return await self.send_json(
@@ -125,6 +131,7 @@ class ChatConsumer(BaseConsumer):
                 self.group_name, {'type': 'chat.message', 'payload': message}
             )
             await self.notify_message(self.chat_id, message)
+            await self.hook_bot_reply(message)
 
         elif action == 'message.delete':
             message = await self.delete_message(content)
@@ -174,6 +181,9 @@ class ChatConsumer(BaseConsumer):
                 'detail': "Avval voice.begin yuborilishi kerak.",
             })
             return
+        if not await self.can_post():
+            await self._voice_error(meta['client_id'], "Kanalga faqat adminlar yoza oladi.")
+            return
         if not data:
             await self._voice_error(meta['client_id'], "Ovoz fayli bo'sh.")
             return
@@ -194,6 +204,7 @@ class ChatConsumer(BaseConsumer):
             self.group_name, {'type': 'chat.message', 'payload': message}
         )
         await self.notify_message(self.chat_id, message)
+        await self.hook_bot_reply(message)
 
     async def _voice_error(self, client_id, detail):
         await self.send_json(
@@ -266,6 +277,22 @@ class ChatConsumer(BaseConsumer):
     @database_sync_to_async
     def is_member(self, chat_id, user_id):
         return ChatMember.objects.filter(chat_id=chat_id, user_id=user_id).exists()
+
+    @database_sync_to_async
+    def can_post(self):
+        chat = Chat.objects.filter(pk=self.chat_id).first()
+        if not chat:
+            return False
+        return chat.can_post(self.user.pk)
+
+    @database_sync_to_async
+    def hook_bot_reply(self, message_data):
+        from chats.bot import route_bot_reply
+
+        chat = Chat.objects.filter(pk=message_data.get('chat')).first()
+        msg = Message.objects.filter(pk=message_data.get('id')).first()
+        if chat and msg:
+            route_bot_reply(chat, msg)
 
     @database_sync_to_async
     def create_message(self, content):

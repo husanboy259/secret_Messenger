@@ -84,6 +84,30 @@ def notify_chat_deleted(chat):
         )
 
 
+def notify_chat_updated(chat, event='members.updated', extra=None):
+    """A'zolik/admin rol o'zgarishini ochiq oyna (chat) va barcha a'zolarga realtime yuboradi."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    payload = {'event': event, 'chat_id': chat.id}
+    if extra:
+        payload.update(extra)
+    async_to_sync(layer.group_send)(
+        f'chat_{chat.id}', {'type': 'chat.updated', 'payload': payload}
+    )
+    for mid in chat.members.values_list('id', flat=True):
+        async_to_sync(layer.group_send)(
+            f'user_{mid}',
+            {
+                'type': 'notification',
+                'payload': {'event': 'chat.updated', 'chat_id': chat.id},
+            },
+        )
+
+
 class UploadView(APIView):
     """
     POST /api/uploads/  (multipart: file=..., kind=image|video|audio|voice|file)
@@ -270,7 +294,8 @@ class ChatViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_favorite=True)
         if params.get('unread') == 'true':
             queryset = queryset.filter(
-                messages__is_read=False, messages__sender=self.request.user
+                messages__is_read=False,
+                messages__is_deleted=False,
             ).exclude(messages__sender=self.request.user).distinct()
         if params.get('channel') == 'true':
             queryset = queryset.filter(is_channel=True)
@@ -289,6 +314,20 @@ class ChatViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['user'] = self.request.user
         return context
+
+    def list(self, request, *args, **kwargs):
+        # Har kim (eski va yangi foydalanuvchi) o'z support bot chatini ko'radi.
+        from chats.bot import ensure_support_chat
+
+        ensure_support_chat(request.user)
+        return super().list(request, *args, **kwargs)
+
+    def _require_admin(self, chat, user, message='Faqat adminlar buni qila oladi.'):
+        is_admin = ChatMember.objects.filter(
+            chat=chat, user=user, role=ChatMember.Role.ADMIN
+        ).exists()
+        if not is_admin:
+            raise PermissionDenied(message)
 
     def perform_update(self, serializer):
         member = ChatMember.objects.filter(chat=serializer.instance, user=self.request.user).first()
@@ -310,6 +349,10 @@ class ChatViewSet(viewsets.ModelViewSet):
             qs = ChatMember.objects.filter(chat=chat).select_related('user')
             return Response(ChatMemberSerializer(qs, many=True).data)
 
+        # Guruh/kanalga a'zo qo'shish faqat adminlar ishi (1:1 da ikkalasi admin).
+        if chat.type == Chat.Type.GROUP:
+            self._require_admin(chat, request.user)
+
         user_ids = request.data.get('user_ids') or []
         if not isinstance(user_ids, list) or not user_ids:
             return Response(
@@ -322,21 +365,37 @@ class ChatViewSet(viewsets.ModelViewSet):
         existing_ids = set(chat.members.values_list('id', flat=True))
         added = ChatMember.objects.bulk_create(
             [
-                ChatMember(chat=chat, user_id=user.pk)
+                ChatMember(
+                    chat=chat,
+                    user_id=user.pk,
+                    role=ChatMember.Role.ADMIN
+                    if request.data.get('role') == ChatMember.Role.ADMIN
+                    else ChatMember.Role.MEMBER,
+                )
                 for user in users
                 if user.pk not in existing_ids
             ]
         )
+        notify_chat_updated(chat, 'members.updated')
         if not added:
             return Response({'detail': 'Ular allaqachon a\'zo.'}, status=status.HTTP_200_OK)
         return Response(
-            ChatMemberSerializer(ChatMember.objects.filter(chat=chat), many=True).data,
+            ChatMemberSerializer(
+                ChatMember.objects.filter(chat=chat).select_related('user'), many=True
+            ).data,
             status=status.HTTP_201_CREATED,
         )
 
     @action(detail=True, methods=['delete'], url_path=r'members/(?P<user_id>\d+)')
     def remove_member(self, request, pk=None, user_id=None):
         chat = self.get_object()
+        if chat.type == Chat.Type.GROUP:
+            self._require_admin(chat, request.user)
+        if int(user_id) == chat.created_by_id:
+            return Response(
+                {'detail': 'Chat egasini chiqarib bo\'lmaydi.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if int(user_id) == request.user.pk:
             return Response(
                 {'detail': 'O\'zingizni chiqara olmaysiz.'},
@@ -345,7 +404,40 @@ class ChatViewSet(viewsets.ModelViewSet):
         deleted, _ = ChatMember.objects.filter(chat=chat, user_id=user_id).delete()
         if not deleted:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        notify_chat_updated(chat, 'members.updated')
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['patch'],
+        url_path=r'members/(?P<user_id>\d+)/role',
+    )
+    def set_member_role(self, request, pk=None, user_id=None):
+        """PATCH {role: 'admin'|'member'} — admin qo'shish/cheklash. Faqat admin.  Egani o'zgarmaydi."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        role = (request.data.get('role') or '').strip().lower()
+        if role not in (ChatMember.Role.ADMIN, ChatMember.Role.MEMBER):
+            return Response(
+                {'role': "'admin' yoki 'member' kiring."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        member = ChatMember.objects.filter(chat=chat, user_id=user_id).first()
+        if not member:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if member.user_id == chat.created_by_id:
+            return Response(
+                {'detail': "Channel/chat egasining rolini o'zgartirib bo'lmaydi."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        member.role = role
+        member.save(update_fields=['role'])
+        notify_chat_updated(
+            chat, 'members.updated', {'user_id': int(user_id), 'role': role}
+        )
+        return Response(
+            ChatMemberSerializer(member, context=self.get_serializer_context()).data
+        )
 
     @action(detail=True, methods=['get', 'post'], url_path='messages')
     def messages(self, request, pk=None):
@@ -366,9 +458,14 @@ class ChatViewSet(viewsets.ModelViewSet):
             data=request.data, context={**self.get_serializer_context(), 'chat': chat}
         )
         serializer.is_valid(raise_exception=True)
+        if not chat.can_post(request.user):
+            raise PermissionDenied('Kanalga faqat adminlar yoza oladi.')
         message = serializer.save(chat=chat, sender=request.user)
         data = MessageSerializer(message, context=self.get_serializer_context()).data
         notify_message_created(chat, request.user.pk, data)
+        from chats.bot import route_bot_reply
+
+        route_bot_reply(chat, message)
         return Response(data, status=status.HTTP_201_CREATED)
 
     def _filter_messages(self, queryset, params):
