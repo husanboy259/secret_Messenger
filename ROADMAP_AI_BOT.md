@@ -103,11 +103,14 @@ def route_bot_reply(chat, message):
 ```
 
 ### Konkurentlik/multi-worker
-`route_bot_reply` blogida `queue`: Celery (Redis broker) yoki `asyncio` consumer.
+`route_bot_reply` javobni **background thread** (`threading.Thread`) orqali
+tayyorlaydi — foydalanuvchi so'rovi bloklanmaydi, Render free tier uchun yetarli.
+Agar ko'p worker/Redis kerak bo'lsa, keyinroq Celery (Redis broker) yoki
+`asyncio` consumer'ga o'zgartiriladi.
 Frontend streaming talab qilmasa ham, javob **keyingi WS/global** realtime
-orqali boradi — DMES shuning uchun `Message(sender=bot)` ni yaratib,
+orqali boradi — shuning uchun `Message(sender=bot)` ni yaratib,
 `channel_layer.group_send('chat_<id>', chat.message)` + `notify_message_created`
-qilish kerak (already-mavjud printsiplar).
+qilinadi (ammo-amalga ishlayapti, `chats/bot.py` → `_publish_bot_message`).
 
 ---
 
@@ -239,5 +242,8 @@ Birinchi versiya uchun to'liq javob yetarli.
 
 ---
 
-Eslatma: `chats/bot.py` hozirgi `route_bot_reply` — log yozadi va `None` qaytaradi.
-Faza 1 natijasi sifatida shu funksiyani to'ldiring va `AI_ENABLED=True` qiling.
+Eslatma: **Faza 1 bajarildi** — `chats/bot.py` (`route_bot_reply`) va
+`chats/ai/provider.py` (OpenRouter, stdlib `urllib`) tayyor. Javob background
+thread'da yaratilib, oddiy `Message` sifatida realtime broadcast qilinadi.
+Ishga tushirish uchun env: `AI_ENABLED=True`, `AI_API_KEY=<OpenRouter token>`,
+ixtiyoriy: `AI_MODEL` (standart `openrouter/auto`), `AI_BASE_URL`, `AI_MAX_TOKENS`.
