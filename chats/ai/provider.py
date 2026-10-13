@@ -1,4 +1,4 @@
-"""LLM client — OpenAI-compatible API (OpenRouter va boshqa endpoint'lar).
+"""LLM client — OpenAI-compatible API (Google AI Studio/Gemini, OpenRouter va boshqa).
 
 Faqat stdlib `urllib` ishlatiladi, shuning uchun yangi pip-bog'liqlik kerak emas.
 Konfiguratsiya `settings.py` dagi `AI_*` o'zgaruvchilardan olinadi.

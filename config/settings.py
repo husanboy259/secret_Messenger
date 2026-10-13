@@ -127,13 +127,17 @@ else:
         },
     }
 
-# ── AI support (OpenRouter — OpenAI-compatible API) ─────────────────────────
-# Token server env'da saqlanadi (kommit qilinmaydi). `AI_ENABLED=True` bo'lsa
-# «Messger Support» chatidagi xabarlarga realtime javob yaratiladi.
-AI_ENABLED = os.environ.get('AI_ENABLED', 'False').lower() == 'true'
+# ── AI support (Google AI Studio / Gemini — OpenAI-compatible API) ─────────
+# Token server env'da saqlanadi (kommit qilinmaydi). Agar `AI_API_KEY` berilgan
+# bo'lsa AI avtomatik yoqiladi (har ikkala shartda ham support chat javob beradi).
+AI_ENABLED = (os.environ.get('AI_ENABLED', 'False').lower() == 'true') or bool(
+    os.environ.get('AI_API_KEY', '').strip()
+)
 AI_API_KEY = os.environ.get('AI_API_KEY', '').strip()
-AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1').rstrip('/')
-AI_MODEL = os.environ.get('AI_MODEL', 'openrouter/auto').strip()
+AI_BASE_URL = os.environ.get(
+    'AI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai'
+).rstrip('/')
+AI_MODEL = os.environ.get('AI_MODEL', 'gemini-2.0-flash').strip()
 AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', '512'))
 AI_CONTEXT_MESSAGES = int(os.environ.get('AI_CONTEXT_MESSAGES', '12'))
 AI_REQUEST_TIMEOUT = int(os.environ.get('AI_REQUEST_TIMEOUT', '60'))

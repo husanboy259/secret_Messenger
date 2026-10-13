@@ -243,7 +243,10 @@ Birinchi versiya uchun to'liq javob yetarli.
 ---
 
 Eslatma: **Faza 1 bajarildi** — `chats/bot.py` (`route_bot_reply`) va
-`chats/ai/provider.py` (OpenRouter, stdlib `urllib`) tayyor. Javob background
-thread'da yaratilib, oddiy `Message` sifatida realtime broadcast qilinadi.
-Ishga tushirish uchun env: `AI_ENABLED=True`, `AI_API_KEY=<OpenRouter token>`,
-ixtiyoriy: `AI_MODEL` (standart `openrouter/auto`), `AI_BASE_URL`, `AI_MAX_TOKENS`.
+`chats/ai/provider.py` (OpenAI-compatible, stdlib `urllib`) tayyor. Javob
+background thread'da yaratilib, oddiy `Message` sifatida realtime broadcast
+qilinadi. Ishga tushirish uchun env: `AI_API_KEY=<token>` (Google AI Studio /
+Gemini — standart, yoki OpenRouter uchun `AI_BASE_URL` + `AI_MODEL` o'rnatiladi).
+Token bo'lsa `AI_ENABLED` avtomatik yoqiladi. Standartlar: `AI_BASE_URL` =
+`https://generativelanguage.googleapis.com/v1beta/openai`, `AI_MODEL` =
+`gemini-2.0-flash`.
