@@ -31,18 +31,19 @@ def chat_completion(messages, *, model=None, max_tokens=None, temperature=0.7):
         'max_tokens': max_tokens or settings.AI_MAX_TOKENS,
         'temperature': temperature,
     }
-    # Autentifikatsiya: Google AI Studio (Gemini) `x-goog-api-key` header'ini,
-    # OpenRouter esa `Authorization: Bearer` ni qabul qiladi.
+    # Autentifikatsiya. Gemini'ning OpenAI-moslik (compatibility) endpointi
+    # `Authorization: Bearer <key>` kutadi; OpenRouter ham xuddi shunday. Gemini
+    # uchun qo'shimcha `x-goog-api-key` ham yuboriladi (zararsiz, ikkalasini ham
+    # qabul qiladi) — turli konfiguratsiyalarda ishlashi uchun.
     headers = {
         'Content-Type': 'application/json',
+        'Authorization': f'Bearer {settings.AI_API_KEY}',
         # OpenRouter raqamlarini ko'rsatish uchun (ixtiyoriy)
         'HTTP-Referer': 'https://secret-messenger-sepia-xi.vercel.app/',
         'X-Title': 'Messger Support',
     }
     if 'generativelanguage.googleapis.com' in base:
         headers['x-goog-api-key'] = settings.AI_API_KEY
-    else:
-        headers['Authorization'] = f'Bearer {settings.AI_API_KEY}'
 
     request = urllib.request.Request(
         f'{base}/chat/completions',

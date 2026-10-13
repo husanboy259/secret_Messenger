@@ -182,7 +182,10 @@ def _generate_reply(chat, message_id):
         return chat_completion(payload)
     except LLMError as exc:
         logger.warning('AI javob olinmadi (chat=%s): %s', chat.id, exc)
-        return None
+        return (
+            "Kechirasiz, hozir javob bera olmayapman. "
+            "Birozdan so'ng qayta urinib ko'ring."
+        )
 
 
 def _publish_bot_message(chat, text):

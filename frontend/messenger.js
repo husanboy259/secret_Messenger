@@ -1609,8 +1609,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.infoAddSearch.value = '';
         dom.infoAddResults.innerHTML = '';
         const canManage = chat.my_role === 'admin';
+        const isOwner = !!chat.created_by && chat.created_by.id === state.me?.id;
         dom.infoAddMembers.hidden = !canManage;
-        dom.infoManage.hidden = !canManage;
+        dom.infoManage.hidden = !isOwner;
         dom.infoTitle.textContent = chat.is_channel ? 'Kanal ma\'lumoti' : 'Guruh ma\'lumoti';
         dom.infoSub.textContent = (chat.is_public && chat.username) ? '@' + chat.username : (chat.is_channel ? 'Kanal' : 'Guruh');
         dom.infoHead.innerHTML = '';
