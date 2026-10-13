@@ -1525,3 +1525,118 @@ input, textarea { -webkit-appearance: none; appearance: none; }
     .msgs { padding-left: 8px; padding-right: 8px; }
     .composer__row button:first-of-type { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GROUP / CHANNEL FEATURES + ANIMATIONS  (info, manage, meet, member actions)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* --- animatsiyalar --- */
+@keyframes mg-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mg-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes mg-menu { from { opacity: 0; transform: translateY(-6px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes mg-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes mg-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .5; } }
+@keyframes mg-row { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.modal:not([hidden]) { animation: mg-in .18s ease both; }
+.modal:not([hidden]) .modal__card { animation: mg-pop .24s cubic-bezier(.22,1,.36,1) both; }
+.msg, .member-row { animation: mg-up .22s ease both; }
+@media (prefers-reduced-motion: reduce) {
+    .modal:not([hidden]), .modal:not([hidden]) .modal__card,
+    .msg, .member-row, .meet__menu, .pop { animation: none !important; }
+}
+
+/* --- Meet tugmasi (ovoz + video bitta tugmada) --- */
+.meet { position: relative; }
+.meet__menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+    min-width: 210px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+    background: var(--surface); border: 1px solid var(--line-2);
+    border-radius: var(--r-md); box-shadow: 0 18px 40px rgba(0,0,0,.42);
+    animation: mg-menu .16s ease both;
+}
+.meet__menu[hidden] { display: none; }
+.meet__item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
+    color: var(--text-2); font: inherit; font-size: 13.5px; text-align: left;
+    transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.meet__item:hover { background: var(--hover); color: var(--text); transform: translateX(2px); }
+.meet__item .ico { width: 17px; height: 17px; color: var(--accent-3); }
+
+/* --- public badge, online dot --- */
+.member-badge--public { background: var(--grad-soft); color: var(--accent-3); }
+.member-badge--muted { background: rgba(139, 92, 242, .18); color: var(--accent); }
+.member-badge--banned { background: rgba(229, 72, 77, .16); color: #e5484d; }
+.dot-online {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: #2ecc71; box-shadow: 0 0 0 3px rgba(46, 204, 113, .18);
+    flex: none;
+}
+.dot-online.is-off { background: var(--text-3); box-shadow: none; }
+.member-avatar-wrap { position: relative; flex: none; }
+.member-avatar-wrap .dot-online { position: absolute; right: -1px; bottom: -1px; }
+
+/* --- info modal --- */
+.info-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 14px; }
+.info-head .avatar { width: 84px; height: 84px; font-size: 32px; }
+.info-head__name { font-size: 19px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.info-head__name .ico { width: 16px; height: 16px; color: var(--accent-3); }
+.info-head__user { font-size: 13px; color: var(--accent-3); }
+.info-head__about { max-width: 420px; text-align: center; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.info-head__stats { font-size: 12.5px; color: var(--text-3); }
+.info-foot { display: flex; gap: 10px; }
+.info-foot .btn { flex: 1; }
+
+/* --- member action menu (pop) --- */
+.pop#memberMenu { padding: 6px; min-width: 190px; }
+#memberMenu { position: fixed; z-index: 90; }
+#memberMenu[hidden] { display: none; }
+.member-menu__item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+    border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
+    color: var(--text-2); font: inherit; font-size: 13.5px; text-align: left;
+}
+.member-menu__item:hover { background: var(--hover); color: var(--text); }
+.member-menu__item--danger { color: #e5484d; }
+.member-menu__item--danger:hover { background: rgba(229, 72, 77, .12); color: #e5484d; }
+.member-menu__item .ico { width: 16px; height: 16px; }
+.member-menu__head { padding: 8px 12px 6px; font-size: 12px; color: var(--text-3); }
+
+/* --- manage tabs --- */
+.tabs { display: flex; gap: 4px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); }
+.tabs__btn {
+    flex: 1; padding: 10px 8px; border: 0; background: none; cursor: pointer;
+    color: var(--text-3); font: inherit; font-size: 13px; font-weight: 700;
+    border-bottom: 2px solid transparent; transition: color .15s ease, border-color .15s ease;
+}
+.tabs__btn:hover { color: var(--text-2); }
+.tabs__btn.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.manage-setting { display: flex; flex-direction: column; gap: 8px; padding: 6px 2px 2px; }
+.manage-setting__hint { font-size: 12px; color: var(--text-3); line-height: 1.5; }
+.member-role-select {
+    padding: 6px 8px; border: 1px solid var(--line-2); border-radius: var(--r-sm);
+    background: var(--surface-2); color: var(--text); font: inherit; font-size: 12.5px;
+}
+
+/* --- addModal group options --- */
+.photo-pick { display: flex; align-items: center; gap: 12px; }
+.opt { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
+.opt:hover { border-color: var(--line-2); }
+.opt__check { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); }
+.opt__title { display: block; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.opt__sub { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+
+/* public / channel badge in chat list */
+.chat__public { flex: none; width: 13px; height: 13px; color: var(--accent-3); }
+
+/* --- join request rows --- */
+.jr-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; }
+.jr-row__body { flex: 1; min-width: 0; }
+.jr-row__name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.jr-row__sub { font-size: 11.5px; color: var(--text-3); }
+.jr-row .btn { padding: 6px 12px; font-size: 12.5px; }
+
+

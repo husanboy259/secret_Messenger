@@ -41,6 +41,9 @@ DEV_PAGES = (
     'messenger.css',
     'messenger.js',
     'config.js',
+    'join.html',
+    'join.css',
+    'join.js',
 )
 
 
@@ -69,6 +72,9 @@ urlpatterns = [
     path('messenger.css', dev_file, {'filename': 'messenger.css'}),
     path('messenger.js', dev_file, {'filename': 'messenger.js'}),
     path('config.js', dev_file, {'filename': 'config.js'}),
+    path('join.html', dev_file, {'filename': 'join.html'}, name='join_page'),
+    path('join.css', dev_file, {'filename': 'join.css'}),
+    path('join.js', dev_file, {'filename': 'join.js'}),
 
     path('admin/', admin.site.urls),
 

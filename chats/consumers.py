@@ -116,12 +116,9 @@ class ChatConsumer(BaseConsumer):
             })
 
         elif action == 'message.create':
-            if not await self.can_post():
-                return await self.send_json({
-                    'type': 'error',
-                    'code': 'forbidden',
-                    'detail': 'Kanalga faqat adminlar yoza oladi.',
-                })
+            deny = await self.can_post()
+            if deny:
+                return await self.send_json({'type': 'error', 'code': 'forbidden', 'detail': deny})
             message = await self.create_message(content)
             if message is None:
                 return await self.send_json(
@@ -181,8 +178,9 @@ class ChatConsumer(BaseConsumer):
                 'detail': "Avval voice.begin yuborilishi kerak.",
             })
             return
-        if not await self.can_post():
-            await self._voice_error(meta['client_id'], "Kanalga faqat adminlar yoza oladi.")
+        deny = await self.can_post()
+        if deny:
+            await self._voice_error(meta['client_id'], deny)
             return
         if not data:
             await self._voice_error(meta['client_id'], "Ovoz fayli bo'sh.")
@@ -280,10 +278,15 @@ class ChatConsumer(BaseConsumer):
 
     @database_sync_to_async
     def can_post(self):
+        """Xabar yozish taqiqlangan hollarni qaytaradi (None = mumkin)."""
         chat = Chat.objects.filter(pk=self.chat_id).first()
         if not chat:
-            return False
-        return chat.can_post(self.user.pk)
+            return 'Chat topilmadi.'
+        if not chat.can_post(self.user.pk):
+            return 'Kanalga faqat adminlar yoza oladi.'
+        if chat.is_muted_user(self.user.pk):
+            return 'Siz bu chatda mute qilingansiz — yozolmaysiz.'
+        return None
 
     @database_sync_to_async
     def hook_bot_reply(self, message_data):

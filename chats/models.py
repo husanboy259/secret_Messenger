@@ -89,6 +89,25 @@ class Chat(models.Model):
     is_favorite = models.BooleanField(default=False)
     is_muted = models.BooleanField(default=False)
     is_pinned = models.BooleanField(default=False)
+    # Ommaviy guruh/kanal: @username orqali topiladi va link orqali qo'shiladi.
+    username = models.CharField(
+        max_length=32,
+        blank=True,
+        unique=True,
+        null=True,
+        help_text="Ommaviy guruh/kanal uchun @username.",
+    )
+    is_public = models.BooleanField(
+        default=False, help_text='Ochig qo\'shilish imkoni (link orqali).'
+    )
+    about = models.TextField(blank=True, default='')
+    invite_code = models.CharField(
+        max_length=24,
+        blank=True,
+        unique=True,
+        null=True,
+        help_text='Guruh/kanal uchun tasodifiy join-link kodi.',
+    )
     pinned_message = models.ForeignKey(
         'Message',
         on_delete=models.SET_NULL,
@@ -123,6 +142,24 @@ class Chat(models.Model):
             return True
         return self.is_admin(user_id)
 
+    def is_muted_user(self, user_id):
+        """A'zoning muhlatli yoki doimiy mute holatini qaytaradi."""
+        member = ChatMember.objects.filter(chat=self, user_id=user_id).first()
+        if not member:
+            return False
+        if member.muted_until:
+            return member.muted_until > timezone.now()
+        return member.is_muted
+
+    def ensure_invite_code(self):
+        """Guruh/kanal uchun invite-code bo'lmasa yaratadi va qaytaradi."""
+        if not self.invite_code:
+            import secrets
+
+            self.invite_code = secrets.token_urlsafe(16)[:16]
+            Chat.objects.filter(pk=self.pk).update(invite_code=self.invite_code)
+        return self.invite_code
+
 
 class ChatMember(models.Model):
     """A'zo ro'yxati. Guruhda rol va oxirgi o'qilgan xabar saqlanadi."""
@@ -138,6 +175,9 @@ class ChatMember(models.Model):
         choices=Role.choices,
         default=Role.MEMBER,
     )
+    is_muted = models.BooleanField(default=False)
+    muted_until = models.DateTimeField(null=True, blank=True)
+    banned_at = models.DateTimeField(null=True, blank=True)
     joined_at = models.DateTimeField(auto_now_add=True)
     last_read_message = models.ForeignKey(
         'Message',
@@ -153,6 +193,58 @@ class ChatMember(models.Model):
 
     def __str__(self):
         return f'{self.user} in {self.chat}'
+
+
+class ChatBan(models.Model):
+    """Chiqarilgan (ban) a'zo — manage panelda «Banned» ro'yxati uchun saqlanadi.
+
+    Ban qilinganda `ChatMember` o'chiriladi (a'zolik tugaydi), bu rekord esa
+    qaytib qo'shilishi (unban) va tarix uchun qoladi.
+    """
+
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='bans')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_bans'
+    )
+    banned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+'
+    )
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('chat', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} banned in {self.chat}'
+
+
+class JoinRequest(models.Model):
+    """Xususiy (private) guruh/kanalga qo'shilish so'rovi — admin tasdiqlaydi."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', "Kutilmoqda"
+        APPROVED = 'approved', "Qabul qilindi"
+        REJECTED = 'rejected', "Rad etildi"
+
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='join_requests')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='join_requests',
+    )
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('chat', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} -> {self.chat} ({self.status})'
 
 
 class Message(models.Model):
@@ -309,8 +401,10 @@ __all__ = [
     'Attachment',
     'Call',
     'Chat',
+    'ChatBan',
     'ChatMember',
     'Folder',
+    'JoinRequest',
     'Message',
     'ReadReceipt',
     'Reaction',

@@ -141,7 +141,8 @@
                 } else {
                     localStorage.setItem('user', JSON.stringify({ username, display_name: username }));
                 }
-                window.location.href = 'messenger.html';
+                const next = new URLSearchParams(window.location.search).get('next');
+                window.location.href = (next && next.startsWith('/')) ? next : 'messenger.html';
             } catch (err) {
                 errorBox.textContent = "Serverga ulanib bo'lmadi. Django ishlayotganini tekshiring.";
                 errorBox.style.display = 'block';

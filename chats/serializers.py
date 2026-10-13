@@ -5,8 +5,10 @@ from chats.models import (
     Attachment,
     Call,
     Chat,
+    ChatBan,
     ChatMember,
     Folder,
+    JoinRequest,
     Message,
     ReadReceipt,
     Reaction,
@@ -194,10 +196,42 @@ class CallSerializer(serializers.ModelSerializer):
 class ChatMemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     last_read_message = MessageSerializer(read_only=True)
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMember
-        fields = ['id', 'user', 'role', 'joined_at', 'last_read_message']
+        fields = [
+            'id',
+            'user',
+            'role',
+            'is_muted',
+            'muted_until',
+            'is_owner',
+            'joined_at',
+            'last_read_message',
+        ]
+
+    def get_is_owner(self, obj):
+        return obj.chat.created_by_id == obj.user_id
+
+
+class JoinRequestSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = JoinRequest
+        fields = ['id', 'chat', 'user', 'status', 'created_at']
+        read_only_fields = fields
+
+
+class ChatBanSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    banned_by = UserSerializer(read_only=True)
+
+    class Meta:
+        model = ChatBan
+        fields = ['id', 'user', 'banned_by', 'reason', 'created_at']
+        read_only_fields = fields
 
 
 class ChatSerializer(serializers.ModelSerializer):
@@ -213,6 +247,12 @@ class ChatSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     my_role = serializers.SerializerMethodField()
+    member_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True,
+        help_text='Chatga qo\'shiladigan foydalanuvchi idlari.',
+    )
     folder = serializers.PrimaryKeyRelatedField(
         queryset=Folder.objects.all(),
         allow_null=True,
@@ -229,6 +269,10 @@ class ChatSerializer(serializers.ModelSerializer):
             'name',
             'title',
             'avatar',
+            'username',
+            'is_public',
+            'about',
+            'invite_code',
             'created_by',
             'members',
             'member_ids',
@@ -249,6 +293,7 @@ class ChatSerializer(serializers.ModelSerializer):
             'id',
             'created_by',
             'members',
+            'invite_code',
             'created_at',
         ]
 
@@ -295,6 +340,20 @@ class ChatSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_username(self, value):
+        value = (value or '').strip().lower().lstrip('@')
+        if not value:
+            return ''
+        if not (value.replace('_', '').isalnum()):
+            raise serializers.ValidationError(
+                "Username faqat harf, raqam va pastki chiziqdan iborat bo'lishi kerak."
+            )
+        if Chat.objects.exclude(pk=self.instance.pk if self.instance else None).filter(
+            username__iexact=value
+        ).exists():
+            raise serializers.ValidationError('Bu username band.')
+        return value
+
     def validate(self, attrs):
         # Pinned xabar shu chatga tegishli bo'lishi kerak.
         pinned = attrs.get('pinned_message')
@@ -304,6 +363,13 @@ class ChatSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'pinned_message': 'Xabar boshqa chatga tegishli.'}
                 )
+
+        is_public = attrs.get('is_public', getattr(self.instance, 'is_public', False))
+        existing_username = getattr(self.instance, 'username', '') or ''
+        if is_public and not (attrs.get('username') or existing_username):
+            raise serializers.ValidationError(
+                {'username': "Ommaviy guruh/kanal uchun @username kerak."}
+            )
 
         if self.instance:
             # PATCH: faqat nom/avatar o'zgaradi, a'zolar va tur emas.
@@ -358,6 +424,8 @@ class ChatSerializer(serializers.ModelSerializer):
         requester = self.context['request'].user
         members = list(dict.fromkeys([requester.pk, *member_ids]))
         chat = Chat.objects.create(created_by=requester, **validated_data)
+        if chat.type == Chat.Type.GROUP:
+            chat.ensure_invite_code()
         ChatMember.objects.bulk_create(
             [
                 ChatMember(

@@ -93,12 +93,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         query: '',
         activeChatId: null,
         messages: [],
+        messagesCache: {},   // chat_id -> [message] — boshqa chatga o'tilganda ham aralashmasligi uchun
         replyTo: null,
         socket: null,
         pending: new Map(),      // client_id -> true (optimistik xabarlar)
         pendingAttachment: null, // upload qilingan attachment optimistik xabar uchun
         pendingVoiceBlob: null,  // WS orqali yuboriladigan ovoz fayli (Blob)
         membersChat: null,       // Adminlar modali ochiq bo'lgan chat
+        infoChat: null,          // Info modali ochiq bo'lgan chat
+        manageChat: null,        // Manage modali ochiq bo'lgan chat
+        manageTab: 'admins',
+        manageMembers: [],       // manage modaldagi joriy a'zolar
+        pendingAvatarUrl: null,  // guruh yaratishda yuklangan rasm URL
     };
 
     const dom = {
@@ -177,6 +183,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         membersList: $('#membersList'),
         membersFoot: $('#membersFoot'),
         membersAdd: $('#membersAdd'),
+        // Guruh/kanal: meet, info, manage, a'zo amallari
+        btnMeet: $('#btnMeet'),
+        meetMenu: $('#meetMenu'),
+        btnInfo: $('#btnInfo'),
+        infoModal: $('#infoModal'),
+        infoTitle: $('#infoTitle'),
+        infoSub: $('#infoSub'),
+        infoHead: $('#infoHead'),
+        infoMembers: $('#infoMembers'),
+        infoFoot: $('#infoFoot'),
+        infoShare: $('#infoShare'),
+        infoAddMembers: $('#infoAddMembers'),
+        infoManage: $('#infoManage'),
+        infoAddArea: $('#infoAddArea'),
+        infoAddSearch: $('#infoAddSearch'),
+        infoAddResults: $('#infoAddResults'),
+        manageModal: $('#manageModal'),
+        manageTitle: $('#manageTitle'),
+        manageSub: $('#manageSub'),
+        manageTabs: $('#manageTabs'),
+        manageBody: $('#manageBody'),
+        manageFoot: $('#manageFoot'),
+        manageSave: $('#manageSave'),
+        memberMenu: $('#memberMenu'),
+        userModal: $('#userModal'),
+        userModalHead: $('#userModalHead'),
+        userModalMsg: $('#userModalMsg'),
+        // addModal guruh sozlamalari
+        addPhotoWrap: $('#addPhotoWrap'),
+        addPhotoPreview: $('#addPhotoPreview'),
+        addPhotoInput: $('#addPhotoInput'),
+        addPhotoBtn: $('#addPhotoBtn'),
+        addPhotoClear: $('#addPhotoClear'),
+        addPublicWrap: $('#addPublicWrap'),
+        addPublic: $('#addPublic'),
+        addUsernameWrap: $('#addUsernameWrap'),
+        addUsername: $('#addUsername'),
         btnCallVoice: $('#btnCallVoice'),
         btnCallVideo: $('#btnCallVideo'),
         callOverlay: $('#callOverlay'),
@@ -413,7 +456,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (chat.is_channel) return { title: chat.title, status: 'Kanal' };
         if (chat.is_bot) return { title: chat.title, status: 'bot' };
         if (peer) return { title: (peer.display_name || peer.username), status: peer.is_online ? 'online' : 'offline' };
-        if (chat.type === 'group') return { title: chat.title, status: `${chat.members ? chat.members.length : 0} a\'zo` };
+        if (chat.type === 'group') {
+            const members = chat.members || [];
+            const online = members.filter(m => m.is_online && m.id !== state.me?.id).length;
+            const base = `${members.length} a'zo`;
+            return { title: chat.title, status: online ? `${base} · ${online} online` : base };
+        }
         return { title: chat.title, status: 'suhbat' };
     }
 
@@ -510,11 +558,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadMessages() {
         const chat = state.chats.find(c => c.id === state.activeChatId);
         if (!chat) return;
+        const chatId = chat.id;
+        // Tez qayta ochilganda qayta yuklamaslik uchun har chat uchun alohida
+        // cache ishlatamiz — natijada chatlar bir-biriga aralashmaydi.
+        if (state.messagesCache[chatId]) {
+            state.messages = state.messagesCache[chatId];
+            renderMessageList(true);
+            return;
+        }
         try {
-            const data = await apiJSON(`/api/chats/${chat.id}/messages/?limit=100`);
-            state.messages = Array.isArray(data) ? data : (data.results || []);
+            const data = await apiJSON(`/api/chats/${chatId}/messages/?limit=100`);
+            if (state.activeChatId !== chatId) return; // eskirgan javob — foydalanmasdan tashlaymiz
+            const msgs = Array.isArray(data) ? data : (data.results || []);
+            state.messagesCache[chatId] = msgs;
+            state.messages = msgs;
             renderMessageList(true);
         } catch (err) {
+            if (state.activeChatId !== chatId) return;
             toast('Xabarlar yuklanmadi: ' + fmtErr(err));
         }
     }
@@ -548,6 +608,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyComposerPermission(chat);
         dom.btnCallVoice.hidden = !!chat.is_bot;
         dom.btnCallVideo.hidden = !!chat.is_bot;
+        if (dom.btnMeet) dom.btnMeet.hidden = !!chat.is_bot;
+        if (dom.btnInfo) dom.btnInfo.hidden = chat.type !== 'group';
     }
 
     /* Kanalda faqat adminlar yozadi — qolganlar uchun composer read-only. */
@@ -639,6 +701,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!data || !p.chat_id) return;
         if (data.sender && data.sender.id === state.me?.id) return;
         if (p.chat_id === state.activeChatId) { upsertMessage(data); return; }
+        // Faol bo'lmagan chatga kelgan yangi xabar uning cache'ini eskiradi —
+        // ochilganda qayta yuklanadi va yangi xabar ko'rinadi.
+        delete state.messagesCache[p.chat_id];
 
         let chat = state.chats.find(c => c.id === p.chat_id);
         if (!chat) {
@@ -962,8 +1027,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearInterval(call.ringTimer);
     }
 
-    dom.btnCallVoice.addEventListener('click', () => startCall('voice'));
-    dom.btnCallVideo.addEventListener('click', () => startCall('video'));
+    dom.btnCallVoice.addEventListener('click', () => { closeMeetMenu(); startCall('voice'); });
+    dom.btnCallVideo.addEventListener('click', () => { closeMeetMenu(); startCall('video'); });
 
     dom.callEnd.addEventListener('click', () => endCallLocal());
 
@@ -1507,6 +1572,485 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    /* ─────────────────────────────────────────────────────────────────────
+       MEET — bitta tugma: ovozli / video qo'ng'iroq menyusi
+       ───────────────────────────────────────────────────────────────────── */
+    function closeMeetMenu() { if (dom.meetMenu) dom.meetMenu.hidden = true; }
+    if (dom.btnMeet) {
+        dom.btnMeet.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dom.meetMenu.hidden = !dom.meetMenu.hidden;
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (dom.meetMenu && !dom.meetMenu.hidden && !e.target.closest('.meet')) closeMeetMenu();
+    });
+
+    if (dom.btnInfo) dom.btnInfo.addEventListener('click', () => {
+        if (state.activeChatId) openInfo(state.activeChatId);
+    });
+
+    /* ─────────────────────────────────────────────────────────────────────
+       INFO MODAL — guruh/kanal ma'lumoti + a'zolar (online)
+       ───────────────────────────────────────────────────────────────────── */
+    const chatAvatarHTML = (chat, size = 'md') => (chat && chat.avatar)
+        ? `<span class="avatar avatar--${size}" style="background-image:url('${escapeHTML(mediaURL(chat.avatar))}');background-size:cover;background-position:center"></span>`
+        : `<span class="avatar avatar--${size}">${initials((chat && chat.title) || '?')}</span>`;
+
+    const isMemberMuted = (m) => !!(m && (m.is_muted || (m.muted_until && new Date(m.muted_until) > new Date())));
+
+    async function openInfo(chatId) {
+        const chat = state.chats.find(c => c.id === chatId) || await apiJSON(`/api/chats/${chatId}/`);
+        if (!chat) return;
+        state.infoChat = chatId;
+        state.infoMembers = [];
+        dom.infoModal.hidden = false;
+        dom.infoAddArea.hidden = true;
+        dom.infoAddSearch.value = '';
+        dom.infoAddResults.innerHTML = '';
+        const canManage = chat.my_role === 'admin';
+        dom.infoAddMembers.hidden = !canManage;
+        dom.infoManage.hidden = !canManage;
+        dom.infoTitle.textContent = chat.is_channel ? 'Kanal ma\'lumoti' : 'Guruh ma\'lumoti';
+        dom.infoSub.textContent = (chat.is_public && chat.username) ? '@' + chat.username : (chat.is_channel ? 'Kanal' : 'Guruh');
+        dom.infoHead.innerHTML = '';
+        dom.infoMembers.innerHTML = '<p class="add-none">Yuklanmoqda…</p>';
+        await loadInfoMembers(chat);
+    }
+
+    async function loadInfoMembers(chat) {
+        let list = [];
+        try {
+            list = await apiJSON(`/api/chats/${chat.id}/members/`);
+        } catch (err) {
+            dom.infoMembers.innerHTML = `<p class="add-none">Yuklanmadi: ${escapeHTML(fmtErr(err))}</p>`;
+            return;
+        }
+        state.infoMembers = list;
+        const online = list.filter(m => m.user && m.user.is_online).length;
+        const uname = chat.username ? `<span class="info-head__user">@${escapeHTML(chat.username)}</span>` : '';
+        const about = chat.about ? `<p class="info-head__about">${escapeHTML(chat.about)}</p>` : '';
+        dom.infoHead.innerHTML = `
+            ${chatAvatarHTML(chat, 'lg')}
+            <div class="info-head__name">${escapeHTML(chat.title)}${chat.is_channel ? icon('i-channel', 'ico') : ''}</div>
+            ${uname}
+            ${about}
+            <div class="info-head__stats">${list.length} a'zo · ${online} online</div>`;
+        dom.infoMembers.innerHTML = list.map(m => infoMemberRow(m)).join('')
+            || '<p class="add-none">A\'zolar yo\'q.</p>';
+    }
+
+    function infoMemberRow(m) {
+        const u = m.user || {};
+        const isMe = u.id === state.me?.id;
+        let badge = '';
+        if (m.is_owner) badge += '<span class="member-badge member-badge--owner">Ega</span>';
+        else if (m.role === 'admin') badge += '<span class="member-badge">Admin</span>';
+        if (isMemberMuted(m)) badge += '<span class="member-badge member-badge--muted">Mute</span>';
+        const dot = `<span class="dot-online${u.is_online ? '' : ' is-off'}"></span>`;
+        return `
+        <div class="member-row" data-info-uid="${u.id}">
+            <span class="member-avatar-wrap">${avatarHTML(u, 'sm')}${dot}</span>
+            <span class="member-meta">
+                <span class="member-name">${escapeHTML(u.display_name || u.username)}${isMe ? ' <em>(siz)</em>' : ''}</span>
+                <span class="member-sub">@${escapeHTML(u.username || '')}</span>
+            </span>
+            <span class="member-side">${badge}</span>
+        </div>`;
+    }
+
+    dom.infoMembers.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-info-uid]');
+        if (!row) return;
+        const uid = Number(row.dataset.infoUid);
+        if (uid === state.me?.id) return;
+        const chat = state.chats.find(c => c.id === state.infoChat);
+        const member = (state.infoMembers || []).find(m => m.user && m.user.id === uid);
+        if (member) openMemberMenu(row, chat, member);
+    });
+
+    dom.infoManage.addEventListener('click', () => {
+        const id = state.infoChat;
+        dom.infoModal.hidden = true;
+        if (id) openManage(id);
+    });
+
+    if (dom.infoShare) dom.infoShare.addEventListener('click', async () => {
+        if (!state.infoChat) return;
+        try {
+            const data = await apiJSON(`/api/chats/${state.infoChat}/invite/`);
+            const link = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}join.html?code=${encodeURIComponent(data.invite_code)}`;
+            try {
+                if (navigator.share) { await navigator.share({ url: link, title: 'Messger guruh' }); return; }
+                await navigator.clipboard.writeText(link);
+                toast('Havola nusxalandi ✓');
+            } catch {
+                window.prompt('Havolani nusxalang:', link);
+            }
+        } catch (err) {
+            toast('Havola olinmadi: ' + fmtErr(err));
+        }
+    });
+
+    /* A'zo amallari menyusi (profil / mute / admin / ban) */
+    function openMemberMenu(anchor, chat, member) {
+        const u = member.user || {};
+        const canManage = chat && chat.my_role === 'admin';
+        const muted = isMemberMuted(member);
+        const items = [`<button class="member-menu__item" data-mm="profile">${icon('i-user', 'ico')} Profilni ko'rish</button>`];
+        if (canManage && !member.is_owner) {
+            items.push(`<button class="member-menu__item" data-mm="${muted ? 'unmute' : 'mute'}">${icon('i-mic', 'ico')} ${muted ? 'Mutedan chiqarish' : 'Mute qilish'}</button>`);
+            items.push(`<button class="member-menu__item" data-mm="${member.role === 'admin' ? 'demote' : 'promote'}">${icon('i-shield', 'ico')} ${member.role === 'admin' ? 'Adminlikdan olish' : 'Admin qilish'}</button>`);
+            if (member.role !== 'admin') {
+                items.push(`<button class="member-menu__item member-menu__item--danger" data-mm="ban">${icon('i-logout', 'ico')} Guruhdan chiqarish (ban)</button>`);
+            }
+        }
+        dom.memberMenu.innerHTML = `<div class="member-menu__head">${escapeHTML(u.display_name || u.username || '')}</div>${items.join('')}`;
+        state.memberMenuTarget = { chat, member };
+        dom.memberMenu.hidden = false;
+        const rect = anchor.getBoundingClientRect();
+        const w = dom.memberMenu.offsetWidth || 210;
+        const h = dom.memberMenu.offsetHeight || 200;
+        let left = Math.min(rect.right - w, window.innerWidth - w - 8);
+        left = Math.max(8, left);
+        let top = rect.bottom + 6;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, rect.top - h - 6);
+        dom.memberMenu.style.left = left + 'px';
+        dom.memberMenu.style.top = top + 'px';
+    }
+
+    dom.memberMenu.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-mm]');
+        if (!btn) return;
+        const target = state.memberMenuTarget;
+        if (!target) return;
+        const { chat, member } = target;
+        const uid = member.user.id;
+        const act = btn.dataset.mm;
+        dom.memberMenu.hidden = true;
+        if (act === 'profile') { showUserProfile(member.user); return; }
+        if (act === 'ban' && !confirm('A\'zoni guruhdan chiqarib, ban qilinsinmi?')) return;
+        try {
+            if (act === 'mute') await apiJSON(`/api/chats/${chat.id}/members/${uid}/mute/`, { method: 'POST', body: '{}' });
+            else if (act === 'unmute') await apiJSON(`/api/chats/${chat.id}/members/${uid}/unmute/`, { method: 'POST', body: '{}' });
+            else if (act === 'promote') await apiJSON(`/api/chats/${chat.id}/members/${uid}/role/`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
+            else if (act === 'demote') await apiJSON(`/api/chats/${chat.id}/members/${uid}/role/`, { method: 'PATCH', body: JSON.stringify({ role: 'member' }) });
+            else if (act === 'ban') await apiJSON(`/api/chats/${chat.id}/members/${uid}/ban/`, { method: 'POST', body: '{}' });
+            toast('Bajarildi ✓');
+            const fresh = state.chats.find(c => c.id === chat.id);
+            if (!dom.infoModal.hidden && fresh) await loadInfoMembers(fresh);
+            if (!dom.manageModal.hidden) await loadManageTab();
+        } catch (err) {
+            toast('Xatolik: ' + fmtErr(err));
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!dom.memberMenu.hidden && !dom.memberMenu.contains(e.target) && !e.target.closest('[data-info-uid]')) {
+            dom.memberMenu.hidden = true;
+        }
+    });
+
+    /* A'zo profilini ko'rish (kichik modal) */
+    function showUserProfile(u) {
+        dom.userModalHead.innerHTML = `
+            ${avatarHTML(u, 'lg')}
+            <div class="info-head__name">${escapeHTML(u.display_name || u.username)}</div>
+            <span class="info-head__user">@${escapeHTML(u.username || '')}</span>
+            ${u.bio ? `<p class="info-head__about">${escapeHTML(u.bio)}</p>` : ''}
+            <div class="info-head__stats">${u.is_online ? 'online' : 'offline'}</div>`;
+        dom.userModalMsg.onclick = () => {
+            dom.userModal.hidden = true;
+            startPrivateChat(u.id);
+        };
+        dom.userModal.hidden = false;
+    }
+
+    async function startPrivateChat(userId) {
+        try {
+            const chat = await apiJSON('/api/chats/', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'private', member_ids: [userId] }),
+            });
+            await loadChats();
+            openChat(chat.id);
+        } catch (err) {
+            if (String(err.message).includes('allaqachon mavjud')) {
+                const data = await apiJSON('/api/chats/').catch(() => ({ results: [] }));
+                const list = data.results || data || [];
+                const found = list.find(c => { const p = peerOf(c); return p && p.id === userId; });
+                if (found) { await loadChats(); openChat(found.id); return; }
+            }
+            toast('Chat ochilmadi: ' + fmtErr(err));
+        }
+    }
+
+    /* A'zo qo'shish (info modaldan) */
+    dom.infoAddMembers.addEventListener('click', () => {
+        dom.infoAddArea.hidden = !dom.infoAddArea.hidden;
+        if (!dom.infoAddArea.hidden) dom.infoAddSearch.focus();
+    });
+    let infoSearchTimer;
+    dom.infoAddSearch.addEventListener('input', (e) => {
+        clearTimeout(infoSearchTimer);
+        const q = e.target.value.trim();
+        infoSearchTimer = setTimeout(async () => {
+            if (!q) { dom.infoAddResults.innerHTML = ''; return; }
+            try {
+                const data = await apiJSON(`/api/users/?search=${encodeURIComponent(q)}`);
+                const users = data.results || (Array.isArray(data) ? data : []);
+                dom.infoAddResults.innerHTML = users.map(u => `
+                    <button class="user-row" data-info-add="${u.id}" data-name="${escapeHTML(u.display_name || u.username)}" type="button">
+                        ${avatarHTML(u, 'md')}
+                        <span class="user-row__body">
+                            <span class="user-row__name">${escapeHTML(u.display_name || u.username)}</span>
+                            <span class="user-row__sub">@${escapeHTML(u.username)}</span>
+                        </span>
+                        <span class="user-row__act">${icon('i-plus', 'ico')}</span>
+                    </button>`).join('') || '<p class="add-none">Topilmadi.</p>';
+            } catch { dom.infoAddResults.innerHTML = '<p class="add-none">Xatolik yuz berdi.</p>'; }
+        }, 250);
+    });
+    dom.infoAddResults.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-info-add]');
+        if (!b || b.disabled) return;
+        b.disabled = true;
+        try {
+            await apiJSON(`/api/chats/${state.infoChat}/members/`, {
+                method: 'POST',
+                body: JSON.stringify({ user_ids: [Number(b.dataset.infoAdd)], role: 'member' }),
+            });
+            toast(`${b.dataset.name || 'Foydalanuvchi'} qo'shildi ✓`);
+            const chat = state.chats.find(c => c.id === state.infoChat);
+            if (chat) await loadInfoMembers(chat);
+        } catch (err) {
+            toast('Qo\'shilmadi: ' + fmtErr(err));
+            b.disabled = false;
+        }
+    });
+
+    /* ─────────────────────────────────────────────────────────────────────
+       MANAGE MODAL — adminlar / mute / ban / sozlamalar (ega va adminlar)
+       ───────────────────────────────────────────────────────────────────── */
+    async function openManage(chatId) {
+        const chat = state.chats.find(c => c.id === chatId) || await apiJSON(`/api/chats/${chatId}/`);
+        if (!chat) return;
+        state.manageChat = chatId;
+        state.manageTab = 'admins';
+        dom.manageModal.hidden = false;
+        dom.manageTitle.textContent = 'Boshqarish';
+        dom.manageSub.textContent = chat.is_channel ? 'Kanal' : 'Guruh';
+        dom.manageTabs.querySelectorAll('.tabs__btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'admins'));
+        await loadManageTab();
+    }
+
+    dom.manageTabs.addEventListener('click', (e) => {
+        const b = e.target.closest('.tabs__btn');
+        if (!b) return;
+        state.manageTab = b.dataset.tab;
+        dom.manageTabs.querySelectorAll('.tabs__btn').forEach(x => x.classList.toggle('is-active', x === b));
+        loadManageTab();
+    });
+
+    async function loadManageTab() {
+        const chat = state.chats.find(c => c.id === state.manageChat)
+            || await apiJSON(`/api/chats/${state.manageChat}/`).catch(() => null);
+        if (!chat) return;
+        const tab = state.manageTab;
+        dom.manageFoot.hidden = tab !== 'settings';
+        dom.manageBody.innerHTML = '<p class="add-none">Yuklanmoqda…</p>';
+        try {
+            if (tab === 'admins') await renderManageAdmins(chat);
+            else if (tab === 'muted') await renderManageMuted(chat);
+            else if (tab === 'banned') await renderManageBanned(chat);
+            else renderManageSettings(chat);
+        } catch (err) {
+            dom.manageBody.innerHTML = `<p class="add-none">Yuklanmadi: ${escapeHTML(fmtErr(err))}</p>`;
+        }
+    }
+
+    async function renderManageAdmins(chat) {
+        const isOwner = chat.created_by && chat.created_by.id === state.me?.id;
+        const [members, reqs] = await Promise.all([
+            apiJSON(`/api/chats/${chat.id}/members/`),
+            apiJSON(`/api/chats/${chat.id}/join-requests/`).catch(() => []),
+        ]);
+        state.manageMembers = members;
+        let html = '';
+        if (reqs.length) {
+            html += `<div class="member-menu__head">Qo'shilish so'rovlari (${reqs.length})</div>`;
+            html += reqs.map(r => `
+                <div class="jr-row" data-rid="${r.id}">
+                    ${avatarHTML(r.user, 'sm')}
+                    <span class="jr-row__body">
+                        <span class="jr-row__name">${escapeHTML(r.user.display_name || r.user.username)}</span>
+                        <span class="jr-row__sub">@${escapeHTML(r.user.username)}</span>
+                    </span>
+                    <button class="btn btn--primary" data-jr="accept" type="button">Qabul</button>
+                    <button class="btn btn--ghost" data-jr="reject" type="button">Rad</button>
+                </div>`).join('');
+            html += '<div class="list__divider"><span>A\'zolar</span></div>';
+        }
+        html += members.map(m => {
+            const u = m.user || {};
+            const isMe = u.id === state.me?.id;
+            const badge = m.is_owner ? '<span class="member-badge member-badge--owner">Ega</span>'
+                : m.role === 'admin' ? '<span class="member-badge">Admin</span>' : '';
+            let control = '';
+            if (isOwner && !m.is_owner) {
+                control = `<select class="member-role-select" data-role-uid="${u.id}">
+                    <option value="member"${m.role === 'member' ? ' selected' : ''}>A'zo</option>
+                    <option value="admin"${m.role === 'admin' ? ' selected' : ''}>Admin</option>
+                </select>`;
+            }
+            return `
+            <div class="member-row">
+                ${avatarHTML(u, 'sm')}
+                <span class="member-meta">
+                    <span class="member-name">${escapeHTML(u.display_name || u.username)}${isMe ? ' <em>(siz)</em>' : ''}</span>
+                    <span class="member-sub">@${escapeHTML(u.username || '')}</span>
+                </span>
+                <span class="member-side">${badge}</span>${control}
+            </div>`;
+        }).join('');
+        dom.manageBody.innerHTML = html || '<p class="add-none">A\'zolar yo\'q.</p>';
+    }
+
+    async function renderManageMuted(chat) {
+        const members = await apiJSON(`/api/chats/${chat.id}/members/`);
+        const muted = members.filter(isMemberMuted);
+        dom.manageBody.innerHTML = muted.map(m => {
+            const u = m.user || {};
+            const until = m.muted_until ? new Date(m.muted_until).toLocaleString() : 'doimiy';
+            return `
+            <div class="member-row">
+                ${avatarHTML(u, 'sm')}
+                <span class="member-meta">
+                    <span class="member-name">${escapeHTML(u.display_name || u.username)}</span>
+                    <span class="member-sub">Mute: ${escapeHTML(String(until))}</span>
+                </span>
+                <button class="btn btn--ghost" data-unmute-uid="${u.id}" type="button">Chiqarish</button>
+            </div>`;
+        }).join('') || '<p class="add-none">Mute qilingan a\'zolar yo\'q.</p>';
+    }
+
+    async function renderManageBanned(chat) {
+        const bans = await apiJSON(`/api/chats/${chat.id}/bans/`);
+        dom.manageBody.innerHTML = bans.map(b => {
+            const u = b.user || {};
+            return `
+            <div class="member-row">
+                ${avatarHTML(u, 'sm')}
+                <span class="member-meta">
+                    <span class="member-name">${escapeHTML(u.display_name || u.username)}</span>
+                    <span class="member-sub">@${escapeHTML(u.username || '')}${b.reason ? ' · ' + escapeHTML(b.reason) : ''}</span>
+                </span>
+                <button class="btn btn--ghost" data-unban-uid="${u.id}" type="button">Bandan chiqarish</button>
+            </div>`;
+        }).join('') || '<p class="add-none">Ban qilingan a\'zolar yo\'q.</p>';
+    }
+
+    function renderManageSettings(chat) {
+        dom.manageBody.innerHTML = `
+            <div class="manage-setting">
+                <div class="field">
+                    <label class="field__label">Nomi</label>
+                    <input class="field__input" id="mgName" type="text" value="${escapeHTML(chat.title || chat.name || '')}">
+                </div>
+                <div class="field">
+                    <label class="field__label">Tavsif</label>
+                    <textarea class="field__input" id="mgAbout" rows="3" placeholder="Guruh/kanal haqida">${escapeHTML(chat.about || '')}</textarea>
+                </div>
+                <div class="field">
+                    <label class="opt">
+                        <input type="checkbox" class="opt__check" id="mgPublic"${chat.is_public ? ' checked' : ''}>
+                        <span class="opt__body">
+                            <span class="opt__title">Ommaviy (public)</span>
+                            <span class="opt__sub">@username orqali topiladi va link orqali qo'shiladi</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="field" id="mgUsernameWrap" ${chat.is_public ? '' : 'hidden'}>
+                    <label class="field__label">@username</label>
+                    <input class="field__input" id="mgUsername" type="text" value="${escapeHTML(chat.username || '')}" placeholder="@username">
+                </div>
+                <p class="manage-setting__hint">O'zgarishlarni saqlash uchun pastdagi tugmani bosing.</p>
+            </div>`;
+        const pub = dom.manageBody.querySelector('#mgPublic');
+        const wrap = dom.manageBody.querySelector('#mgUsernameWrap');
+        if (pub && wrap) pub.addEventListener('change', () => { wrap.hidden = !pub.checked; });
+    }
+
+    dom.manageBody.addEventListener('click', async (e) => {
+        const jr = e.target.closest('[data-jr]');
+        if (jr) {
+            const rid = jr.closest('[data-rid]').dataset.rid;
+            jr.disabled = true;
+            try {
+                await apiJSON(`/api/chats/${state.manageChat}/join-requests/${rid}/${jr.dataset.jr}/`, { method: 'POST', body: '{}' });
+                toast(jr.dataset.jr === 'accept' ? 'Qabul qilindi ✓' : 'Rad etildi');
+                await loadManageTab();
+            } catch (err) { toast('Xatolik: ' + fmtErr(err)); jr.disabled = false; }
+            return;
+        }
+        const un = e.target.closest('[data-unmute-uid]');
+        if (un) {
+            un.disabled = true;
+            try {
+                await apiJSON(`/api/chats/${state.manageChat}/members/${un.dataset.unmuteUid}/unmute/`, { method: 'POST', body: '{}' });
+                toast('Mutedan chiqarildi ✓');
+                await loadManageTab();
+            } catch (err) { toast('Xatolik: ' + fmtErr(err)); un.disabled = false; }
+            return;
+        }
+        const ub = e.target.closest('[data-unban-uid]');
+        if (ub) {
+            ub.disabled = true;
+            try {
+                await apiJSON(`/api/chats/${state.manageChat}/members/${ub.dataset.unbanUid}/ban/`, { method: 'DELETE' });
+                toast('Bandan chiqarildi ✓');
+                await loadManageTab();
+            } catch (err) { toast('Xatolik: ' + fmtErr(err)); ub.disabled = false; }
+        }
+    });
+
+    dom.manageBody.addEventListener('change', async (e) => {
+        const sel = e.target.closest('.member-role-select');
+        if (!sel) return;
+        try {
+            await apiJSON(`/api/chats/${state.manageChat}/members/${sel.dataset.roleUid}/role/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ role: sel.value }),
+            });
+            toast('Yangilandi ✓');
+        } catch (err) {
+            toast('O\'zgarmadi: ' + fmtErr(err));
+        }
+        await loadManageTab();
+    });
+
+    dom.manageSave.addEventListener('click', async () => {
+        const name = dom.manageBody.querySelector('#mgName')?.value.trim();
+        const about = dom.manageBody.querySelector('#mgAbout')?.value.trim();
+        const isPublic = !!dom.manageBody.querySelector('#mgPublic')?.checked;
+        const username = (dom.manageBody.querySelector('#mgUsername')?.value || '').trim().replace(/^@/, '');
+        dom.manageSave.disabled = true;
+        try {
+            const updated = await apiJSON(`/api/chats/${state.manageChat}/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ name, about, is_public: isPublic, ...(username ? { username } : {}) }),
+            });
+            const idx = state.chats.findIndex(c => c.id === state.manageChat);
+            if (idx >= 0 && updated) state.chats[idx] = updated;
+            toast('Saqlandi ✓');
+            renderChatList();
+            if (state.activeChatId === state.manageChat) renderConversation();
+        } catch (err) {
+            toast('Saqlanmadi: ' + fmtErr(err));
+        } finally {
+            dom.manageSave.disabled = false;
+        }
+    });
+
     function setReply(msg) {
         state.replyTo = { id: msg.id, text: msg.content, author: msg.sender ? (msg.sender.display_name || msg.sender.username) : '?' };
         dom.replyText.textContent = `${state.replyTo.author}: ${msg.content}`;
@@ -1545,10 +2089,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function openAddChat(mode = 'private') {
         addMode = mode;
         selectedUsers = [];
+        state.pendingAvatarUrl = null;
         dom.addName.value = '';
         dom.addSearch.value = '';
         dom.addResults.innerHTML = '';
         dom.addError.style.display = 'none';
+        if (dom.addPhotoInput) dom.addPhotoInput.value = '';
+        if (dom.addPhotoPreview) { dom.addPhotoPreview.innerHTML = '?'; dom.addPhotoPreview.style.backgroundImage = ''; }
+        if (dom.addPhotoClear) dom.addPhotoClear.hidden = true;
+        if (dom.addPublic) dom.addPublic.checked = false;
+        if (dom.addUsername) { dom.addUsername.value = ''; }
         dom.addCreate.disabled = (mode === 'private');
         renderAddMode();
         renderSelected();
@@ -1565,11 +2115,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderAddMode() {
         dom.addModeBtns.forEach(b => b.classList.toggle('is-active', b.dataset.mode === addMode));
         const needsName = addMode !== 'private';
+        const isGroupish = addMode === 'group' || addMode === 'channel';
         dom.addNameWrap.hidden = !needsName;
         dom.addName.placeholder = addMode === 'channel' ? 'Kanal nomi' : 'Guruh nomi';
+        [dom.addPhotoWrap, dom.addPublicWrap].forEach(el => { if (el) el.hidden = !isGroupish; });
+        renderUsernameVisibility();
         dom.addCreate.disabled = addMode === 'private' && selectedUsers.length === 0;
         dom.addCreate.querySelector('.add-create-label').textContent =
             addMode === 'channel' ? 'Kanal yaratish' : (addMode === 'group' ? 'Guruh yaratish' : 'Chatni boshlash');
+    }
+
+    function renderUsernameVisibility() {
+        if (!dom.addUsernameWrap) return;
+        const show = (addMode === 'channel') || (addMode === 'group' && dom.addPublic && dom.addPublic.checked);
+        dom.addUsernameWrap.hidden = !show;
     }
 
     function renderSelected() {
@@ -1643,14 +2202,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         const name = dom.addName.value.trim();
-        if (!name) { dom.addError.textContent = (addMode === 'channel' ? 'Kanal' : 'Guruh') + ' nomi kerak.'; dom.addError.style.display = 'block'; return; }
+        const isChannel = addMode === 'channel';
+        const isPublic = isChannel || !!(dom.addPublic && dom.addPublic.checked);
+        const username = (dom.addUsername && dom.addUsername.value || '').trim().replace(/^@/, '');
+        if (!name) { dom.addError.textContent = (isChannel ? 'Kanal' : 'Guruh') + ' nomi kerak.'; dom.addError.style.display = 'block'; return; }
         if (!selectedUsers.length) { dom.addError.textContent = 'Kamida bitta foydalanuvchi qo\'shing.'; dom.addError.style.display = 'block'; return; }
-        createChat(selectedUsers.map(u => u.id), { name, is_channel: addMode === 'channel', type: 'group' });
+        if (isPublic && !/^[a-zA-Z0-9_]{4,32}$/.test(username)) {
+            dom.addError.textContent = '@username 4-32 belgi (harf, raqam, _) bo\'lishi kerak.';
+            dom.addError.style.display = 'block';
+            return;
+        }
+        dom.addError.style.display = 'none';
+        createChat(selectedUsers.map(u => u.id), { name, is_channel: isChannel, type: 'group' });
     });
+
+    /* Guruh yaratish: rasm yuklash */
+    if (dom.addPhotoBtn) dom.addPhotoBtn.addEventListener('click', () => dom.addPhotoInput.click());
+    if (dom.addPhotoClear) dom.addPhotoClear.addEventListener('click', () => {
+        state.pendingAvatarUrl = null;
+        dom.addPhotoInput.value = '';
+        dom.addPhotoPreview.innerHTML = '?';
+        dom.addPhotoPreview.style.backgroundImage = '';
+        dom.addPhotoClear.hidden = true;
+    });
+    if (dom.addPhotoInput) dom.addPhotoInput.addEventListener('change', async () => {
+        const file = dom.addPhotoInput.files && dom.addPhotoInput.files[0];
+        if (!file) return;
+        dom.addPhotoBtn.disabled = true;
+        dom.addPhotoBtn.textContent = 'Yuklanmoqda...';
+        try {
+            const att = await uploadAttachment(file, 'image');
+            state.pendingAvatarUrl = att.url || att.url_path || '';
+            dom.addPhotoPreview.style.backgroundImage = `url('${state.pendingAvatarUrl}')`;
+            dom.addPhotoPreview.innerHTML = '';
+            dom.addPhotoClear.hidden = false;
+        } catch (err) {
+            toast('Rasm yuklanmadi: ' + fmtErr(err));
+        } finally {
+            dom.addPhotoBtn.disabled = false;
+            dom.addPhotoBtn.textContent = 'Rasm tanlash';
+        }
+    });
+    if (dom.addPublic) dom.addPublic.addEventListener('change', renderUsernameVisibility);
 
     async function createChat(memberIds, extra = {}) {
         const isChannel = extra.is_channel || addMode === 'channel';
         if (!memberIds.length) return;
+        const isPublic = !!(dom.addPublic && dom.addPublic.checked) || isChannel;
+        const username = (dom.addUsername && dom.addUsername.value || '').trim().replace(/^@/, '');
         dom.addCreate.disabled = true;
         try {
             const chat = await apiJSON('/api/chats/', {
@@ -1660,6 +2259,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     member_ids: memberIds,
                     ...(extra.name ? { name: extra.name } : {}),
                     ...(isChannel ? { is_channel: true } : {}),
+                    ...(state.pendingAvatarUrl ? { avatar: state.pendingAvatarUrl } : {}),
+                    ...(isPublic ? { is_public: true } : {}),
+                    ...(username ? { username } : {}),
                 }),
             });
             closeAddChat();

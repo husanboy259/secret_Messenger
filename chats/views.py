@@ -9,14 +9,27 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from chats.models import Attachment, Call, Chat, ChatMember, Folder, Message, ReadReceipt, Reaction
+from chats.models import (
+    Attachment,
+    Call,
+    Chat,
+    ChatBan,
+    ChatMember,
+    Folder,
+    JoinRequest,
+    Message,
+    ReadReceipt,
+    Reaction,
+)
 from chats.permissions import IsChatMember, IsMessageOwnerOrAdmin
 from chats.serializers import (
     AttachmentSerializer,
     CallSerializer,
+    ChatBanSerializer,
     ChatMemberSerializer,
     ChatSerializer,
     FolderSerializer,
+    JoinRequestSerializer,
     MessageSerializer,
     ReactionSerializer,
 )
@@ -106,6 +119,19 @@ def notify_chat_updated(chat, event='members.updated', extra=None):
                 'payload': {'event': 'chat.updated', 'chat_id': chat.id},
             },
         )
+
+
+def notify_user(user_id, payload):
+    """Bitta foydalanuvchiga realtime event yuborish (join/accept/reject uchun)."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    async_to_sync(layer.group_send)(
+        f'user_{user_id}', {'type': 'notification', 'payload': payload}
+    )
 
 
 class UploadView(APIView):
@@ -329,6 +355,20 @@ class ChatViewSet(viewsets.ModelViewSet):
         if not is_admin:
             raise PermissionDenied(message)
 
+    def _ensure_can_modify(self, instance):
+        member = ChatMember.objects.filter(chat=instance, user=self.request.user).first()
+        if not member or member.role != ChatMember.Role.ADMIN:
+            raise PermissionDenied("Faqat chat admini o'zgartira oladi.")
+
+    def update(self, request, *args, **kwargs):
+        # Adminlikni validatsiyadan oldin tekshiramiz (403 ustuvor bo'lsin).
+        self._ensure_can_modify(self.get_object())
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        self._ensure_can_modify(self.get_object())
+        return super().partial_update(request, *args, **kwargs)
+
     def perform_update(self, serializer):
         member = ChatMember.objects.filter(chat=serializer.instance, user=self.request.user).first()
         if not member or member.role != ChatMember.Role.ADMIN:
@@ -439,6 +479,248 @@ class ChatViewSet(viewsets.ModelViewSet):
             ChatMemberSerializer(member, context=self.get_serializer_context()).data
         )
 
+    # ── join / invite ───────────────────────────────────────────────────────
+    @action(detail=True, methods=['get'], url_path='invite')
+    def invite(self, request, pk=None):
+        """GET /api/chats/{id}/invite/ — guruh/kanal join-linkini qaytaradi."""
+        chat = self.get_object()
+        if chat.type != Chat.Type.GROUP:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        base = request.build_absolute_uri('/')
+        code = chat.ensure_invite_code()
+        return Response({'invite_code': code, 'url': f'{base}join.html?code={code}'})
+
+    @action(detail=False, methods=['get'], url_path='by-invite/(?P<code>[^/.]+)')
+    def by_invite(self, request, code=None):
+        """GET /api/chats/by-invite/{code}/ — join sahifasi uchun ochiq ma'lumot."""
+        chat = Chat.objects.filter(invite_code=code).first()
+        if not chat or chat.type != Chat.Type.GROUP:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        member_ids = set(chat.members.values_list('id', flat=True))
+        joined = request.user.pk in member_ids
+        pending = None
+        if not joined and request.user.is_authenticated:
+            req = JoinRequest.objects.filter(chat=chat, user=request.user).first()
+            pending = req.status if req else None
+        return Response({
+            'id': chat.id,
+            'type': chat.type,
+            'name': chat.name,
+            'avatar': chat.avatar,
+            'username': chat.username,
+            'about': chat.about,
+            'is_channel': chat.is_channel,
+            'is_public': chat.is_public,
+            'member_count': len(member_ids),
+            'joined': joined,
+            'request': pending,
+        })
+
+    @action(detail=False, methods=['get'], url_path='discover')
+    def discover(self, request, pk=None):
+        """GET /api/chats/discover/?q= — ommaviy guruh/kanallarni @username/ism bo'yicha qidirish."""
+        q = (request.query_params.get('q') or '').strip().lstrip('@')
+        qs = Chat.objects.filter(is_public=True, type=Chat.Type.GROUP)
+        if q:
+            qs = qs.filter(Q(username__icontains=q) | Q(name__icontains=q))
+        return Response([
+            {
+                'id': c.id,
+                'name': c.name,
+                'avatar': c.avatar,
+                'username': c.username,
+                'about': c.about,
+                'is_channel': c.is_channel,
+                'member_count': c.members.count(),
+            }
+            for c in qs.exclude(created_by=request.user)[:40]
+        ])
+
+    @action(detail=True, methods=['post'], url_path='join')
+    def join(self, request, pk=None):
+        """POST /api/chats/{id}/join/ — ochiq guruhga qo'shilish yoki xususiyga so'rov yuborish.
+
+        A'zo bo'lmagan foydalanuvchi ham chaqira oladi — shuning uchun
+        a'zolik bo'yicha filtrlaydigan `self.get_object()` emas, to'g'ridan-to'g'ri
+        `Chat`dan olamiz (aks holda 404 bo'lardi, join.html ishlamasdi).
+        """
+        chat = Chat.objects.filter(pk=pk).first()
+        if not chat:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if chat.type != Chat.Type.GROUP:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if ChatBan.objects.filter(chat=chat, user=request.user).exists():
+            return Response(
+                {'detail': "Siz bu guruhdan ban qilingansiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if chat.members.filter(pk=request.user.pk).exists():
+            return Response({'joined': True, 'request': None})
+        if chat.is_public:
+            ChatMember.objects.get_or_create(
+                chat=chat, user=request.user, defaults={'role': ChatMember.Role.MEMBER}
+            )
+            notify_chat_updated(chat, 'members.updated', {'user_id': request.user.pk})
+            return Response({'joined': True, 'request': None})
+        req, created = JoinRequest.objects.get_or_create(
+            chat=chat, user=request.user, defaults={'status': JoinRequest.Status.PENDING}
+        )
+        if created:
+            self._notify_admins_join(chat)
+        return Response({'joined': False, 'request': req.status})
+
+    def _notify_admins_join(self, chat):
+        """Adminlarga yangi qo'shilish so'rovi haqida realtime xabar."""
+        for admin_id in ChatMember.objects.filter(
+            chat=chat, role=ChatMember.Role.ADMIN
+        ).values_list('user_id', flat=True):
+            notify_user(admin_id, {'event': 'join.request', 'chat_id': chat.id})
+
+    @action(detail=True, methods=['get'], url_path='join-requests')
+    def join_requests(self, request, pk=None):
+        """GET /api/chats/{id}/join-requests/ — (admin) kutilayotgan so'rovlar."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        qs = JoinRequest.objects.filter(chat=chat, status=JoinRequest.Status.PENDING)
+        return Response(JoinRequestSerializer(qs, many=True).data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path=r'join-requests/(?P<rid>\d+)/(?P<answer>accept|reject)',
+    )
+    def answer_join_request(self, request, pk=None, rid=None, answer=None):
+        """POST /api/chats/{id}/join-requests/{rid}/accept|reject/ — (admin) so'rovni hal qilish."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        req = JoinRequest.objects.filter(pk=rid, chat=chat).first()
+        if not req or req.status != JoinRequest.Status.PENDING:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if answer == 'accept':
+            ChatMember.objects.get_or_create(
+                chat=chat, user=req.user, defaults={'role': ChatMember.Role.MEMBER}
+            )
+            req.status = JoinRequest.Status.APPROVED
+            notify_user(req.user_id, {
+                'event': 'join.accepted',
+                'chat_id': chat.id,
+                'chat': ChatSerializer(chat, context=self.get_serializer_context()).data,
+            })
+            notify_chat_updated(chat, 'members.updated', {'user_id': req.user_id})
+        else:
+            req.status = JoinRequest.Status.REJECTED
+            notify_user(req.user_id, {
+                'event': 'join.rejected',
+                'chat_id': chat.id,
+                'chat': ChatSerializer(chat, context=self.get_serializer_context()).data,
+            })
+        req.save(update_fields=['status'])
+        return Response({'status': req.status})
+
+    # ── ban / mute ──────────────────────────────────────────────────────────
+    def _managed_member(self, chat, user_id):
+        member = ChatMember.objects.filter(chat=chat, user_id=user_id).first()
+        if not member:
+            raise PermissionDenied('Bu foydalanuvchi guruhda emas.')
+        if member.user_id == chat.created_by_id:
+            raise PermissionDenied('Chat egasini cheklab bo\'lmaydi.')
+        if member.user_id == self.request.user.pk:
+            raise PermissionDenied('O\'zingizni cheklay olmaysiz.')
+        return member
+
+    @action(detail=True, methods=['post', 'delete'], url_path=r'members/(?P<user_id>\d+)/ban')
+    def ban_member(self, request, pk=None, user_id=None):
+        """POST   — (owner/admin) a'zoni chiqarish + ban tarixiga yozish.
+        DELETE — (owner/admin) ban bekor qilish."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        if request.method == 'DELETE':
+            deleted, _ = ChatBan.objects.filter(chat=chat, user_id=user_id).delete()
+            if not deleted:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        if int(user_id) == chat.created_by_id:
+            return Response(
+                {'detail': 'Chat egasini chiqarib bo\'lmaydi.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ChatMember.objects.filter(chat=chat, user_id=user_id).delete()
+        ChatBan.objects.update_or_create(
+            chat=chat,
+            user_id=user_id,
+            defaults={
+                'banned_by': request.user,
+                'reason': (request.data.get('reason') or '').strip(),
+            },
+        )
+        notify_chat_updated(chat, 'members.updated', {'user_id': int(user_id), 'banned': True})
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path=r'members/(?P<user_id>\d+)/mute')
+    def mute_member(self, request, pk=None, user_id=None):
+        """POST /api/chats/{id}/members/{uid}/mute/ — (owner/admin) yozishni vaqtinchalik to'xtatish.
+        Body: {minutes: N} — ko'rsatilmasa doimiy."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        member = self._managed_member(chat, user_id)
+        minutes = int(request.data.get('minutes') or 0)
+        if minutes and minutes > 0:
+            member.muted_until = timezone.now() + timezone.timedelta(minutes=minutes)
+            member.is_muted = False
+        else:
+            member.muted_until = None
+            member.is_muted = True
+        member.save(update_fields=['is_muted', 'muted_until'])
+        notify_chat_updated(chat, 'members.updated', {'user_id': int(user_id), 'muted': True})
+        return Response(
+            ChatMemberSerializer(member, context=self.get_serializer_context()).data
+        )
+
+    @action(detail=True, methods=['post'], url_path=r'members/(?P<user_id>\d+)/unmute')
+    def unmute_member(self, request, pk=None, user_id=None):
+        """POST /api/chats/{id}/members/{uid}/unmute/ — (owner/admin) mute bekor."""
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        member = self._managed_member(chat, user_id)
+        member.is_muted = False
+        member.muted_until = None
+        member.save(update_fields=['is_muted', 'muted_until'])
+        notify_chat_updated(chat, 'members.updated', {'user_id': int(user_id), 'muted': False})
+        return Response(
+            ChatMemberSerializer(member, context=self.get_serializer_context()).data
+        )
+
+    # ── banlarni ro'yxatlash (manage panel uchun) ──────────────────────────
+    @action(detail=True, methods=['get'], url_path='bans')
+    def bans(self, request, pk=None):
+        chat = self.get_object()
+        self._require_admin(chat, request.user)
+        return Response(
+            ChatBanSerializer(
+                ChatBan.objects.filter(chat=chat).select_related('user', 'banned_by'),
+                many=True,
+            ).data
+        )
+
+    @action(detail=True, methods=['post'], url_path='leave')
+    def leave(self, request, pk=None):
+        """POST /api/chats/{id}/leave/ — guruhdan chiqish (egoa chiqa olmaydi)."""
+        chat = self.get_object()
+        if chat.type != Chat.Type.GROUP:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if chat.created_by_id == request.user.pk:
+            return Response(
+                {'detail': 'Ega guruhdan chiqib bo\'lmaydi.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        deleted, _ = ChatMember.objects.filter(
+            chat=chat, user_id=request.user.pk
+        ).delete()
+        if not deleted:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        notify_chat_updated(chat, 'members.updated', {'user_id': request.user.pk})
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=['get', 'post'], url_path='messages')
     def messages(self, request, pk=None):
         chat = self.get_object()
@@ -460,6 +742,8 @@ class ChatViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         if not chat.can_post(request.user):
             raise PermissionDenied('Kanalga faqat adminlar yoza oladi.')
+        if chat.is_muted_user(request.user):
+            raise PermissionDenied('Siz bu chatda mute qilingansiz — yozolmaysiz.')
         message = serializer.save(chat=chat, sender=request.user)
         data = MessageSerializer(message, context=self.get_serializer_context()).data
         notify_message_created(chat, request.user.pk, data)

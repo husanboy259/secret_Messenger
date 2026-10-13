@@ -3,9 +3,10 @@
 Har foydalanuvchi (yangi yoki eski) o'zining 1:1 support chatiga ega bo'ladi
 — bu chat oddiy chat kabi ko'rinadi va «Bots» papkasida ham turadi.
 
-AI javob OpenRouter (OpenAI-compatible) orqali yaratiladi: `route_bot_reply`
-hook'i foydalanuvchi xabariga javobni background thread'da tayyorlab, oddiy
-`Message` sifatida realtime broadcast qiladi. To'liq reja — ROADMAP_AI_BOT.md.
+AI javob OpenAI-compatible API (Google AI Studio/Gemini, OpenRouter) orqali
+yaratiladi: `route_bot_reply` hook'i foydalanuvchi xabariga javobni background
+thread'da tayyorlab, oddiy `Message` sifatida realtime broadcast qiladi. To'liq
+reja — ROADMAP_AI_BOT.md.
 """
 
 import logging
@@ -14,6 +15,17 @@ import threading
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+# Har chat uchun alohida lock — tez ketma-ket yozilgan xabarlarda bot javoblari
+# duplikat bo'lib qolmasligi uchun javob tayyorlash serializatsiya qilinadi.
+_reply_locks = {}
+_reply_locks_guard = threading.Lock()
+
+
+def _chat_lock(chat_id):
+    with _reply_locks_guard:
+        return _reply_locks.setdefault(chat_id, threading.Lock())
+
 
 SUPPORT_USERNAME = 'support_bot'
 SUPPORT_CHAT_NAME = 'Messger Support'
@@ -111,9 +123,10 @@ def build_bot_reply(chat_id, message_id):
         if not Message.objects.filter(pk=message_id, chat_id=chat.id).exists():
             return
 
-        reply = _generate_reply(chat, message_id)
-        if reply:
-            _publish_bot_message(chat, reply)
+        with _chat_lock(chat.id):
+            reply = _generate_reply(chat, message_id)
+            if reply:
+                _publish_bot_message(chat, reply)
     except Exception:
         logger.exception('AI javobni tayyorlashda xato (chat=%s)', chat_id)
     finally:
@@ -126,15 +139,29 @@ def _generate_reply(chat, message_id):
 
     bot = get_support_bot()
 
+    trigger = Message.objects.filter(
+        pk=message_id, chat_id=chat.id, is_deleted=False
+    ).first()
+    if trigger is None or trigger.sender_id == bot.pk:
+        return None
+    # Tetik xabarga allaqachon javob yozilgan — takror javob yaratmaymiz.
+    if Message.objects.filter(
+        chat_id=chat.id, sender_id=bot.pk, id__gt=trigger.pk
+    ).exists():
+        logger.info('AI: bu xabarga allaqachon javob bor (chat=%s)', chat.id)
+        return None
+
     history = list(
         Message.objects.filter(chat_id=chat.id, is_deleted=False)
         .exclude(content='')
         .order_by('-id')[: settings.AI_CONTEXT_MESSAGES]
     )
-    # eng so'nggi xabar tetik bo'lgan xabar bo'lishi kerak
     history = sorted(history, key=lambda m: m.id)
-    if not history or history[-1].id != message_id:
-        logger.info('AI: tetik xabar topilmadi yoki yangi xabarlar bor (chat=%s)', chat.id)
+    if not history:
+        return None
+    # Oxirgi xabar botnicmi? Unda javob allaqachon qo'yilgan — qayta javob yo'q.
+    if history[-1].sender_id == bot.pk:
+        logger.info('AI: oxirgi xabar botniki — javob kerak emas (chat=%s)', chat.id)
         return None
 
     conv = []
