@@ -137,7 +137,7 @@ AI_API_KEY = os.environ.get('AI_API_KEY', '').strip()
 AI_BASE_URL = os.environ.get(
     'AI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai'
 ).rstrip('/')
-AI_MODEL = os.environ.get('AI_MODEL', 'gemini-2.5-flash').strip()
+AI_MODEL = os.environ.get('AI_MODEL', 'gemini-3.6-flash').strip()
 AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', '512'))
 AI_CONTEXT_MESSAGES = int(os.environ.get('AI_CONTEXT_MESSAGES', '12'))
 AI_REQUEST_TIMEOUT = int(os.environ.get('AI_REQUEST_TIMEOUT', '60'))
