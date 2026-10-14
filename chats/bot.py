@@ -181,7 +181,10 @@ def _generate_reply(chat, message_id):
     try:
         return chat_completion(payload)
     except LLMError as exc:
-        logger.warning('AI javob olinmadi (chat=%s): %s', chat.id, exc)
+        logger.error('AI javob olinmadi (chat=%s, model=%s, base=%s): %s',
+                     chat.id, settings.AI_MODEL, settings.AI_BASE_URL, exc)
+        if settings.AI_DEBUG:
+            return f"AI xato (DEBUG): {exc}"[:500]
         return (
             "Kechirasiz, hozir javob bera olmayapman. "
             "Birozdan so'ng qayta urinib ko'ring."

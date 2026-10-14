@@ -141,6 +141,8 @@ AI_MODEL = os.environ.get('AI_MODEL', 'gemini-2.5-flash').strip()
 AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', '512'))
 AI_CONTEXT_MESSAGES = int(os.environ.get('AI_CONTEXT_MESSAGES', '12'))
 AI_REQUEST_TIMEOUT = int(os.environ.get('AI_REQUEST_TIMEOUT', '60'))
+# Yoqilsa, AI xatosi tafsiloti javobda (chatda) ko'rsatiladi — faqat debugging uchun.
+AI_DEBUG = os.environ.get('AI_DEBUG', 'False').lower() == 'true'
 
 AUTH_USER_MODEL = 'accounts.User'
 
