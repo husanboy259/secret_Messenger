@@ -678,6 +678,100 @@ html[data-theme="day"] .notify { background: rgba(255, 255, 255, .7); color: var
 .msg--out .bubble__ticks.is-read { color: var(--accent-3); }
 .bubble__edited { font-size: 10.5px; color: var(--text-3); }
 
+/* Xabar ustidagi menyu (o'ng tugma / uzoq bosish) — Telegram Desktop uslubi */
+.msg-menu {
+    position: fixed;
+    z-index: 1400;
+    min-width: 210px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    animation: msgMenuIn .12s ease;
+}
+@keyframes msgMenuIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.msg-menu__react {
+    display: flex;
+    gap: 2px;
+    padding: 2px 2px 7px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
+}
+.msg-menu__react button {
+    flex: 1;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 5px 0;
+    border-radius: 9px;
+    transition: background .12s, transform .12s;
+}
+.msg-menu__react button:hover { background: var(--surface); transform: scale(1.18); }
+.msg-menu > button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border: 0;
+    background: none;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+}
+.msg-menu > button:hover { background: var(--surface); }
+.msg-menu > button .ico { color: var(--text-2); }
+.msg-menu > button.is-danger { color: var(--danger, #e5484d); }
+.msg-menu > button.is-danger .ico { color: var(--danger, #e5484d); }
+
+/* Forward qilish uchun chat tanlash */
+.forward {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, .5);
+    animation: msgMenuIn .12s ease;
+}
+.forward__card {
+    width: min(420px, 92vw);
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border: 1px solid var(--line-2);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.forward__head { padding: 14px 16px; font-weight: 700; color: var(--text); border-bottom: 1px solid var(--line); }
+.forward__list { overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.forward__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border: 0;
+    background: none;
+    border-radius: 10px;
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+}
+.forward__item:hover { background: var(--surface); }
+.forward__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.forward__empty { padding: 16px; text-align: center; color: var(--text-3); }
+
 /* Kun ajratgichi (Bugun / Kecha / sana) */
 .date-sep { display: flex; justify-content: center; margin: 10px 0 6px; }
 .date-sep > span {

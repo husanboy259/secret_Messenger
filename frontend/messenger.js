@@ -1428,6 +1428,205 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /* ── Xabar menyusi — Telegram Desktop uslubida (o'ng tugma / uzoq bosish) ── */
+    let msgMenuEl = null;
+    function closeMsgMenu() {
+        if (msgMenuEl) { msgMenuEl.remove(); msgMenuEl = null; }
+    }
+
+    function openMsgMenu(msg, x, y) {
+        closeMsgMenu();
+        const chat = activeChat();
+        if (!chat) return;
+        const out = !!(msg.sender && msg.sender.id === state.me?.id) || !!msg.replica;
+        const isAdmin = chat.my_role === 'admin';
+        const canDel = out || isAdmin;
+        const isPinned = chat.pinned_message && chat.pinned_message.id === msg.id;
+
+        msgMenuEl = document.createElement('div');
+        msgMenuEl.className = 'msg-menu';
+        msgMenuEl.innerHTML = `
+            <div class="msg-menu__react">
+                ${Object.entries(REACTION_EMOJI).map(([k, e]) => `<button type="button" data-mact="react" data-kind="${k}" title="${k}">${e}</button>`).join('')}
+            </div>
+            <button type="button" data-mact="reply">${icon('i-reply', 'ico ico--sm')}<span>Javob berish</span></button>
+            ${msg.content ? `<button type="button" data-mact="copy">${icon('i-copy', 'ico ico--sm')}<span>Nusxalash</span></button>` : ''}
+            ${msg.content ? `<button type="button" data-mact="forward">${icon('i-send', 'ico ico--sm')}<span>Forward</span></button>` : ''}
+            ${isAdmin ? `<button type="button" data-mact="pin">${icon('i-pin', 'ico ico--sm')}<span>${isPinned ? 'Yopishni olish' : 'Yopish (pin)'}</span></button>` : ''}
+            ${canDel ? `<button type="button" data-mact="del" class="is-danger">${icon('i-trash', 'ico ico--sm')}<span>O'chirish</span></button>` : ''}
+        `;
+        document.body.appendChild(msgMenuEl);
+        const r = msgMenuEl.getBoundingClientRect();
+        msgMenuEl.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+        msgMenuEl.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+        msgMenuEl.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-mact]');
+            if (!b) return;
+            const act = b.dataset.mact;
+            closeMsgMenu();
+            if (act === 'reply') setReply(msg);
+            else if (act === 'copy') copyToClipboard(msg.content);
+            else if (act === 'react') reactTo(msg, b.dataset.kind);
+            else if (act === 'forward') openForwardPicker(msg);
+            else if (act === 'pin') togglePin(msg);
+            else if (act === 'del') deleteMessage(msg);
+        });
+    }
+
+    dom.messageList.addEventListener('contextmenu', (e) => {
+        const wrap = e.target.closest('[data-msg-id]');
+        if (!wrap) return;
+        const msg = state.messages.find(m => m.id === Number(wrap.dataset.msgId));
+        if (!msg || msg.is_deleted || !msg.id) return;
+        e.preventDefault();
+        openMsgMenu(msg, e.clientX, e.clientY);
+    });
+
+    // Mobil: uzoq bosish
+    let lpTimer = null;
+    let lpSuppressClickUntil = 0;
+    const cancelLongPress = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+    dom.messageList.addEventListener('touchstart', (e) => {
+        const wrap = e.target.closest('[data-msg-id]');
+        if (!wrap) return;
+        const touch = e.touches[0];
+        const msg = state.messages.find(m => m.id === Number(wrap.dataset.msgId));
+        if (!msg || msg.is_deleted || !msg.id) return;
+        cancelLongPress();
+        lpTimer = setTimeout(() => {
+            lpTimer = null;
+            lpSuppressClickUntil = Date.now() + 500;
+            openMsgMenu(msg, touch.clientX, touch.clientY);
+        }, 450);
+    }, { passive: true });
+    dom.messageList.addEventListener('touchmove', cancelLongPress, { passive: true });
+    dom.messageList.addEventListener('touchend', cancelLongPress);
+
+    document.addEventListener('click', (e) => {
+        if (Date.now() < lpSuppressClickUntil) return;
+        if (msgMenuEl && !msgMenuEl.contains(e.target)) closeMsgMenu();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { closeMsgMenu(); closeForwardPicker(); }
+    });
+    dom.convBody.addEventListener('scroll', closeMsgMenu, { passive: true });
+
+    async function copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            toast('Nusxalandi');
+        } catch {
+            toast('Nusxalanmadi');
+        }
+    }
+
+    async function reactTo(msg, kind) {
+        if (!msg.id || !kind) return;
+        try {
+            const data = await apiJSON(`/api/messages/${msg.id}/react/`, {
+                method: 'POST',
+                body: JSON.stringify({ kind }),
+            });
+            msg.reactions = data.reactions || [];
+            const idx = state.messages.findIndex(m => m.id === msg.id);
+            const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
+            if (el && idx >= 0) el.outerHTML = messageHTML(state.messages[idx], idx ? state.messages[idx - 1] : null);
+        } catch (err) {
+            toast('Reaction qo\'shilmadi: ' + fmtErr(err));
+        }
+    }
+
+    async function togglePin(msg) {
+        const chat = activeChat();
+        if (!chat) return;
+        const isPinned = chat.pinned_message && chat.pinned_message.id === msg.id;
+        try {
+            if (isPinned) {
+                await api(`/api/chats/${chat.id}/pin/`, { method: 'DELETE' });
+                chat.is_pinned = false;
+                chat.pinned_message = null;
+            } else {
+                await apiJSON(`/api/chats/${chat.id}/pin/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ message_id: msg.id }),
+                });
+                chat.is_pinned = true;
+                chat.pinned_message = { id: msg.id, content: msg.content };
+            }
+            renderConversation();
+        } catch (err) {
+            toast('Pin xatosi: ' + fmtErr(err));
+        }
+    }
+
+    /* Forward qilish uchun chat tanlash */
+    let forwardEl = null;
+    function closeForwardPicker() {
+        if (forwardEl) { forwardEl.remove(); forwardEl = null; }
+    }
+
+    function openForwardPicker(msg) {
+        closeForwardPicker();
+        const targets = state.chats.filter(c => !(c.is_channel && c.my_role !== 'admin'));
+        forwardEl = document.createElement('div');
+        forwardEl.className = 'forward';
+        forwardEl.innerHTML = `
+            <div class="forward__card">
+                <div class="forward__head">Forward qilish</div>
+                <div class="forward__list">
+                    ${targets.length
+                        ? targets.map(c => `
+                        <button type="button" class="forward__item" data-fwd="${c.id}">
+                            ${avatarHTML(peerOf(c), 'sm')}
+                            <span class="forward__name">${escapeHTML(c.title)}</span>
+                        </button>`).join('')
+                        : '<div class="forward__empty">Chat topilmadi</div>'}
+                </div>
+            </div>`;
+        document.body.appendChild(forwardEl);
+        forwardEl.addEventListener('click', (e) => {
+            if (e.target === forwardEl) { closeForwardPicker(); return; }
+            const b = e.target.closest('[data-fwd]');
+            if (!b) return;
+            const targetId = Number(b.dataset.fwd);
+            closeForwardPicker();
+            forwardMessage(msg, targetId);
+        });
+    }
+
+    async function forwardMessage(msg, chatId) {
+        const author = msg.sender ? (msg.sender.display_name || msg.sender.username) : '?';
+        const body = `↪ Forwarded from ${author}\n${msg.content}`;
+        try {
+            if (chatId === state.activeChatId && state.socket && state.socket.readyState === 1) {
+                state.socket.send(JSON.stringify({
+                    action: 'message.create',
+                    content: body,
+                    client_id: crypto.randomUUID(),
+                }));
+            } else {
+                await apiJSON(`/api/chats/${chatId}/messages/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content: body }),
+                });
+            }
+            toast('Forward qilindi');
+        } catch (err) {
+            toast('Forward xatosi: ' + fmtErr(err));
+        }
+    }
+
     /* Conv header menyusi — chat / kanalni o'chirish */
     let convMenuEl = null;
     function closeConvMenu() {
