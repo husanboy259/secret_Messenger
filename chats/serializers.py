@@ -306,6 +306,16 @@ class ChatSerializer(serializers.ModelSerializer):
         return 'Bo\'sh suhbat'
 
     def get_last_message(self, obj):
+        if hasattr(obj, '_last_msg_id'):
+            if obj._last_msg_id is None:
+                return None
+            return {
+                'id': obj._last_msg_id,
+                'content': obj._last_msg_content or '',
+                'sender': obj._last_msg_sender or '',
+                'created_at': obj._last_msg_created,
+                'is_read': obj._last_msg_is_read,
+            }
         message = obj.messages.filter(is_deleted=False).order_by('-created_at').first()
         if not message:
             return None
@@ -318,6 +328,8 @@ class ChatSerializer(serializers.ModelSerializer):
         }
 
     def get_unread_count(self, obj):
+        if hasattr(obj, '_unread_count'):
+            return obj._unread_count or 0
         user = self.context['user']
         return (
             obj.messages.filter(is_read=False, is_deleted=False)
@@ -326,6 +338,8 @@ class ChatSerializer(serializers.ModelSerializer):
         )
 
     def get_my_role(self, obj):
+        if hasattr(obj, '_my_role'):
+            return obj._my_role
         member = ChatMember.objects.filter(
             chat=obj, user_id=self.context['user'].pk
         ).first()

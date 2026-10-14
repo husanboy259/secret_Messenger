@@ -255,6 +255,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
     };
 
+    const dayKey = (iso) => {
+        const d = new Date(iso);
+        return isNaN(d) ? '' : `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    };
+
+    const dayLabel = (iso) => {
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+        const diff = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+        if (diff === 0) return 'Bugun';
+        if (diff === 1) return 'Kecha';
+        return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    };
+
     const initials = (name = '?') => escapeHTML(name.trim().charAt(0).toUpperCase() || '?');
 
     const avatarHTML = (user, size = 'md') => user && user.avatar
@@ -580,7 +595,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderMessageList(scroll = true) {
-        dom.messageList.innerHTML = state.messages.map((m, i) => messageHTML(m, i ? state.messages[i - 1] : null)).join('');
+        let html = '';
+        let lastKey = null;
+        state.messages.forEach((m, i) => {
+            const key = dayKey(m.created_at);
+            if (key && key !== lastKey) {
+                html += `<div class="date-sep"><span>${escapeHTML(dayLabel(m.created_at))}</span></div>`;
+                lastKey = key;
+            }
+            html += messageHTML(m, i ? state.messages[i - 1] : null);
+        });
+        dom.messageList.innerHTML = html;
         if (scroll) scrollBottom(dom.convBody);
     }
 

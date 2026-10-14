@@ -1,5 +1,6 @@
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, IntegerField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -297,10 +298,42 @@ class ChatViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsChatMember]
 
     def get_queryset(self):
+        user = self.request.user
+        # Chat ro'yxati uchun eng so'nggi xabar / o'qilmagan soni / rol'ni
+        # bitta so'rovda hisoblaymiz (N+1 va ortiqcha barcha xabarlarni
+        # yuklashning oldini oladi — ro'yxat ancha tez ochiladi).
+        last_msg = Message.objects.filter(
+            chat=OuterRef('pk'), is_deleted=False
+        ).order_by('-created_at')
+        unread = (
+            Message.objects.filter(
+                chat=OuterRef('pk'), is_read=False, is_deleted=False
+            )
+            .exclude(sender=user)
+            .order_by()
+            .values('chat')
+            .annotate(c=Count('id'))
+            .values('c')
+        )
         queryset = (
-            Chat.objects.filter(members=self.request.user)
+            Chat.objects.filter(members=user)
             .select_related('created_by', 'folder', 'pinned_message')
-            .prefetch_related('members', 'messages', 'messages__sender')
+            .prefetch_related('members')
+            .annotate(
+                _last_msg_id=Subquery(last_msg.values('id')[:1]),
+                _last_msg_content=Subquery(last_msg.values('content')[:1]),
+                _last_msg_sender=Subquery(last_msg.values('sender__username')[:1]),
+                _last_msg_created=Subquery(last_msg.values('created_at')[:1]),
+                _last_msg_is_read=Subquery(last_msg.values('is_read')[:1]),
+                _unread_count=Coalesce(
+                    Subquery(unread[:1], output_field=IntegerField()), 0
+                ),
+                _my_role=Subquery(
+                    ChatMember.objects.filter(
+                        chat=OuterRef('pk'), user=user
+                    ).values('role')[:1]
+                ),
+            )
             .distinct()
         )
         params = self.request.query_params
