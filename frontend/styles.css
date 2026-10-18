@@ -1138,24 +1138,9 @@ body {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
-.profile-cover {
-    height: 140px;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
-    position: relative;
-}
-
-.profile-cover::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0);
-    background-size: 20px 20px;
-}
-
 .profile-avatar-wrap {
     position: relative;
-    padding: 0 32px;
-    margin-top: -52px;
+    padding: 32px 32px 0;
 }
 
 .profile-avatar {

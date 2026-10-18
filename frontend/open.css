@@ -41,21 +41,10 @@ body {
 
 @keyframes open-in { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
 
-.open-cover {
-    height: 118px;
-    background: var(--grad);
-    position: relative;
-}
-.open-cover::after {
-    content: "";
-    position: absolute; inset: 0;
-    background: radial-gradient(400px 120px at 80% 0%, rgba(255, 255, 255, .22), transparent 70%);
-}
-
-.open-body { padding: 0 26px 28px; text-align: center; }
+.open-body { padding: 26px 26px 28px; text-align: center; }
 
 .open-avatar {
-    width: 92px; height: 92px; margin: -46px auto 12px;
+    width: 92px; height: 92px; margin: 0 auto 12px;
     border-radius: 50%;
     display: grid; place-items: center;
     font-size: 34px; font-weight: 800; color: #fff;

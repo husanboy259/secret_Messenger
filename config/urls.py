@@ -85,6 +85,7 @@ urlpatterns = [
     path('open.css', dev_file, {'filename': 'open.css'}),
     path('open.js', dev_file, {'filename': 'open.js'}),
     path('i18n.js', dev_file, {'filename': 'i18n.js'}),
+    path('favicon.svg', dev_file, {'filename': 'favicon.svg'}),
     path('open/<str:username>', dev_file, {'filename': 'open.html'}),
     path('open/<str:username>/', dev_file, {'filename': 'open.html'}),
 
