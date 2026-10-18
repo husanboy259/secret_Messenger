@@ -230,9 +230,9 @@
 
         btnMsg.onclick = function () {
             var access = localStorage.getItem('access');
-            var target = 'messenger.html?user=' + encodeURIComponent(data.username);
+            var target = '/messenger.html?user=' + encodeURIComponent(data.username);
             if (!access) {
-                location.href = 'login.html?next=' + encodeURIComponent('/' + target);
+                location.href = '/login.html?next=' + encodeURIComponent(target);
                 return;
             }
             location.href = target;
@@ -248,15 +248,15 @@
             btnOpen.hidden = !data.is_member;
             btnJoin.onclick = function () {
                 var code = data.invite_code || data.username;
-                location.href = 'join.html?code=' + encodeURIComponent(code);
+                location.href = '/join.html?code=' + encodeURIComponent(code);
             };
             btnOpen.onclick = function () {
                 var access = localStorage.getItem('access');
                 if (!access) {
-                    location.href = 'login.html?next=' + encodeURIComponent('/messenger.html?chat=' + encodeURIComponent(data.username));
+                    location.href = '/login.html?next=' + encodeURIComponent('/messenger.html?chat=' + encodeURIComponent(data.username));
                     return;
                 }
-                location.href = 'messenger.html?chat=' + encodeURIComponent(data.username);
+                location.href = '/messenger.html?chat=' + encodeURIComponent(data.username);
             };
         }
 
