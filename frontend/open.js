@@ -62,6 +62,89 @@
         });
     });
 
+    /* --- Odamlarni bazadan qidirish (public search) --- */
+    var searchInput = document.getElementById('openSearch');
+    var resultsBox = document.getElementById('openResults');
+    var searchTimer;
+
+    function clearResults() {
+        if (!resultsBox) return;
+        resultsBox.innerHTML = '';
+        resultsBox.hidden = true;
+    }
+
+    function typeLabel(type) {
+        if (type === 'channel') return (i18n && i18n.t) ? i18n.t('open.channel') : 'Kanal';
+        if (type === 'group') return (i18n && i18n.t) ? i18n.t('open.group') : 'Guruh';
+        return (i18n && i18n.t) ? i18n.t('open.user') : 'Foydalanuvchi';
+    }
+
+    function renderResults(list) {
+        if (!resultsBox) return;
+        resultsBox.innerHTML = '';
+        if (!list.length) {
+            var empty = document.createElement('div');
+            empty.className = 'open-results__empty';
+            empty.textContent = (i18n && i18n.t) ? i18n.t('open.search_empty') : 'Hech narsa topilmadi';
+            resultsBox.appendChild(empty);
+            resultsBox.hidden = false;
+            return;
+        }
+        list.forEach(function (item) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'open-result';
+
+            var av = document.createElement('span');
+            av.className = 'open-result__avatar';
+            if (item.avatar) {
+                av.style.backgroundImage = 'url(' + item.avatar + ')';
+            } else {
+                av.textContent = (item.display_name || item.username || '?').charAt(0).toUpperCase();
+            }
+
+            var info = document.createElement('span');
+            info.className = 'open-result__body';
+
+            var nm = document.createElement('span');
+            nm.className = 'open-result__name';
+            nm.textContent = item.display_name || item.username;
+
+            var sub = document.createElement('span');
+            sub.className = 'open-result__meta';
+            sub.textContent = typeLabel(item.type) + ' \u00b7 @' + item.username;
+
+            info.appendChild(nm);
+            info.appendChild(sub);
+            btn.appendChild(av);
+            btn.appendChild(info);
+            btn.addEventListener('click', function () {
+                location.href = toProfileLink(item.username);
+            });
+            resultsBox.appendChild(btn);
+        });
+        resultsBox.hidden = false;
+    }
+
+    function runSearch(q) {
+        var term = (q || '').trim();
+        if (term.length < 2) return clearResults();
+        fetch(API_BASE + '/api/public/search/?q=' + encodeURIComponent(term))
+            .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+            .then(function (data) { renderResults(data.results || []); })
+            .catch(function () { clearResults(); });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () { runSearch(searchInput.value); }, 300);
+        });
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { searchInput.value = ''; clearResults(); }
+        });
+    }
+
     function showCard() {
         card.hidden = false;
         skeleton.hidden = true;

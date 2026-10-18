@@ -248,3 +248,57 @@ class PublicProfileView(APIView):
         return Response(
             {'detail': 'Bunday profil topilmadi.'}, status=status.HTTP_404_NOT_FOUND
         )
+
+
+class PublicSearchView(APIView):
+    """GET /api/public/search/?q= — ochiq qidiruv (foydalanuvchi/kanal/guruh).
+
+    /open sahifasidagi qidiruv uchun: bazadan mos odamlar, guruh va kanallarni
+    qaytaradi. Autentifikatsiya talab qilinmaydi.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from chats.models import Chat
+
+        query = (request.query_params.get('q') or '').strip()
+        results = []
+        if len(query) >= 2:
+            users = (
+                User.objects.filter(is_active=True)
+                .filter(Q(username__icontains=query) | Q(display_name__icontains=query))
+                .order_by('username')[:20]
+            )
+            for u in users:
+                results.append(
+                    {
+                        'type': 'user',
+                        'username': u.username,
+                        'display_name': u.display_name or u.username,
+                        'avatar': u.avatar or '',
+                        'about': u.bio or '',
+                        'emoji_status': u.emoji_status or '',
+                        'is_online': u.is_online,
+                    }
+                )
+
+            chats = (
+                Chat.objects.filter(is_public=True, username__isnull=False)
+                .exclude(username='')
+                .filter(Q(username__icontains=query) | Q(name__icontains=query))
+                .order_by('name')[:20]
+            )
+            for c in chats:
+                results.append(
+                    {
+                        'type': 'channel' if c.is_channel else 'group',
+                        'username': c.username,
+                        'display_name': c.name or c.username,
+                        'avatar': c.avatar or '',
+                        'about': '',
+                        'members_count': c.members.count(),
+                    }
+                )
+
+        return Response({'query': query, 'results': results})

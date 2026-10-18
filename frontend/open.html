@@ -22,6 +22,11 @@
 </head>
 <body>
     <div class="open-wrap">
+        <div class="open-search">
+            <input type="search" id="openSearch" class="open-search__input" placeholder="Odam yoki kanal izlash" data-i18n-placeholder="open.search_ph" autocomplete="off">
+        </div>
+        <div class="open-results" id="openResults" hidden></div>
+
         <div class="open-card" id="openCard" hidden>
             <div class="open-cover"></div>
             <div class="open-body">
@@ -61,11 +66,6 @@
             </div>
         </div>
 
-        <div class="lang-switch" data-built="1">
-            <button type="button" data-lang="uz">O'zbekcha</button>
-            <button type="button" data-lang="ru">Русский</button>
-            <button type="button" data-lang="en">English</button>
-        </div>
         <a class="open-back" href="index.html">← <span data-i18n="open.back">Bosh sahifa</span></a>
     </div>
 

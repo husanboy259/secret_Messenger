@@ -24,7 +24,6 @@
                 <a href="profile.html" class="active-link" data-i18n="nav.profile">Profil</a>
             </div>
             <div class="nav-cta">
-                <div class="lang-switch" style="margin-right:10px;"></div>
                 <a href="login.html" class="btn btn-outline" id="profile-login-btn">Kirish</a>
                 <button class="mobile-menu-toggle" id="menu-toggle" aria-label="Menyu">
                     <span></span><span></span><span></span>
@@ -94,6 +93,15 @@
                         <li><span data-i18n="profile.side_name">Ism</span><strong id="side-name">—</strong></li>
                         <li><span data-i18n="profile.side_username">Foydalanuvchi nomi</span><strong id="side-username">—</strong></li>
                         <li><span data-i18n="profile.side_status">Holat</span><strong class="text-success" data-i18n="profile.online">Online</strong></li>
+                    </ul>
+                </div>
+                <div class="side-card">
+                    <h3 data-i18n="settings.title">Sozlamalar</h3>
+                    <ul class="side-list">
+                        <li>
+                            <span data-i18n="common.language">Til</span>
+                            <select id="profileLangSelect" class="form-control" data-lang-select aria-label="Language" style="max-width:150px;"></select>
+                        </li>
                     </ul>
                 </div>
                 <div class="side-card">
@@ -267,6 +275,43 @@
         });
         document.getElementById('copy-link-btn').addEventListener('click', copyProfileLink);
         document.addEventListener('langchange', () => fillProfile(user));
+
+        // --- 3.5. Til sozlamasi (settings ichida) ---
+        const langSelect = document.getElementById('profileLangSelect');
+        if (langSelect && window.MESSGER_I18N) {
+            const i18n = window.MESSGER_I18N;
+            i18n.supported.forEach((code) => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = i18n.langName(code);
+                langSelect.appendChild(opt);
+            });
+            langSelect.value = i18n.lang;
+            langSelect.addEventListener('change', () => {
+                const lang = langSelect.value;
+                i18n.setLang(lang);
+                const token = localStorage.getItem('access');
+                if (token) {
+                    fetch(API_BASE + '/api/settings/me/', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ language: lang })
+                    }).catch(() => {});
+                }
+            });
+            const token = localStorage.getItem('access');
+            if (token) {
+                fetch(API_BASE + '/api/settings/me/', { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then((res) => (res.ok ? res.json() : null))
+                    .then((s) => {
+                        if (s && s.language && i18n.supported.indexOf(s.language) !== -1 && s.language !== i18n.lang) {
+                            i18n.setLang(s.language);
+                            langSelect.value = s.language;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
 
         async function refreshProfile() {
             const token = localStorage.getItem('access');
