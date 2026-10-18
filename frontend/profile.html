@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil — Messger</title>
+    <title data-i18n="profile.doc_title">Profil — Messger</title>
+    <script src="i18n.js"></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,10 +20,11 @@
                 <span class="logo-text">Messger</span>
             </a>
             <div class="nav-links">
-                <a href="index.html">Bosh sahifa</a>
-                <a href="profile.html" class="active-link">Profil</a>
+                <a href="index.html" data-i18n="nav.home">Bosh sahifa</a>
+                <a href="profile.html" class="active-link" data-i18n="nav.profile">Profil</a>
             </div>
             <div class="nav-cta">
+                <div class="lang-switch" style="margin-right:10px;"></div>
                 <a href="login.html" class="btn btn-outline" id="profile-login-btn">Kirish</a>
                 <button class="mobile-menu-toggle" id="menu-toggle" aria-label="Menyu">
                     <span></span><span></span><span></span>
@@ -57,45 +59,46 @@
                     <div class="info-item">
                         <span class="info-icon">📧</span>
                         <div>
-                            <span class="info-label">Email</span>
+                            <span class="info-label" data-i18n="profile.email">Email</span>
                             <span class="info-value" id="info-email">email@example.com</span>
                         </div>
                     </div>
                     <div class="info-item">
                         <span class="info-icon">🕒</span>
                         <div>
-                            <span class="info-label">So'nggi ko'rilgan</span>
+                            <span class="info-label" data-i18n="profile.last_seen">So'nggi ko'rilgan</span>
                             <span class="info-value" id="info-last-seen">Hozir</span>
                         </div>
                     </div>
                     <div class="info-item">
                         <span class="info-icon">👥</span>
                         <div>
-                            <span class="info-label">Chatlar</span>
-                            <span class="info-value">0 ta suhbat</span>
+                            <span class="info-label" data-i18n="profile.chats">Chatlar</span>
+                            <span class="info-value" data-i18n="profile.chats_zero">0 ta suhbat</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="profile-actions">
-                    <button class="btn btn-primary" id="edit-profile-btn">✏️ Profilni tahrirlash</button>
-                    <a href="messenger.html" class="btn btn-secondary">💬 Xabarlarga o'tish</a>
+                    <button class="btn btn-primary" id="edit-profile-btn" data-i18n="profile.edit">✏️ Profilni tahrirlash</button>
+                    <a href="messenger.html" class="btn btn-secondary" data-i18n="profile.to_messages">💬 Xabarlarga o'tish</a>
+                    <button class="btn btn-secondary" id="copy-link-btn" type="button" data-i18n="profile.copy_link">🔗 Havolani nusxalash</button>
                 </div>
             </div>
 
             <!-- O'ngda: Tezkor ma'lumot -->
             <aside class="profile-side">
                 <div class="side-card">
-                    <h3>Profil malumotlari</h3>
+                    <h3 data-i18n="profile.side_title">Profil malumotlari</h3>
                     <ul class="side-list">
-                        <li><span>Ism</span><strong id="side-name">—</strong></li>
-                        <li><span>Foydalanuvchi nomi</span><strong id="side-username">—</strong></li>
-                        <li><span>Holat</span><strong class="text-success">Online</strong></li>
+                        <li><span data-i18n="profile.side_name">Ism</span><strong id="side-name">—</strong></li>
+                        <li><span data-i18n="profile.side_username">Foydalanuvchi nomi</span><strong id="side-username">—</strong></li>
+                        <li><span data-i18n="profile.side_status">Holat</span><strong class="text-success" data-i18n="profile.online">Online</strong></li>
                     </ul>
                 </div>
                 <div class="side-card">
-                    <h3>Hisob</h3>
-                    <a href="#logout" class="btn btn-outline btn-block" id="logout-btn">🚪 Chiqish</a>
+                    <h3 data-i18n="profile.account">Hisob</h3>
+                    <a href="#logout" class="btn btn-outline btn-block" id="logout-btn">&#128682; <span data-i18n="profile.logout">Chiqish</span></a>
                 </div>
             </aside>
         </div>
@@ -104,24 +107,24 @@
     <!-- EDIT MODAL -->
     <div class="edit-overlay" id="edit-overlay">
         <div class="edit-modal">
-            <button class="edit-close" id="edit-close" aria-label="Yopish">✕</button>
-            <h2>Profilni tahrirlash</h2>
+            <button class="edit-close" id="edit-close" aria-label="Yopish">&#10005;</button>
+            <h2 data-i18n="profile.edit_title">Profilni tahrirlash</h2>
             <form id="edit-form">
                 <div class="form-group">
-                    <label for="edit-name">Ism</label>
+                    <label for="edit-name" data-i18n="profile.label_name">Ism</label>
                     <input type="text" id="edit-name" class="form-control" placeholder="Ismingiz">
                 </div>
                 <div class="form-group">
-                    <label for="edit-bio">Bio</label>
+                    <label for="edit-bio" data-i18n="profile.label_bio">Bio</label>
                     <textarea id="edit-bio" class="form-control" rows="3" placeholder="O'zingiz haqingizda"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="edit-avatar">Avatar URL</label>
-                    <input type="url" id="edit-avatar" class="form-control" placeholder="https://... rasm manzili">
+                    <label for="edit-avatar" data-i18n="profile.label_avatar">Avatar</label>
+                    <input type="url" id="edit-avatar" class="form-control" placeholder="https://... rasm manzili" data-i18n-placeholder="profile.avatar_ph">
                 </div>
                 <div class="edit-buttons">
-                    <button type="submit" class="btn btn-primary">Saqlash</button>
-                    <button type="button" class="btn btn-secondary" id="edit-cancel">Bekor qilish</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="common.save">Saqlash</button>
+                    <button type="button" class="btn btn-secondary" id="edit-cancel" data-i18n="common.cancel">Bekor qilish</button>
                 </div>
                 <div id="edit-status" class="form-error" style="display:none;"></div>
             </form>
@@ -137,6 +140,7 @@
 
         // Deploy bo'lsa config.js da API_BASE ko'rsatiladi, lokalda '' = same-origin
         const API_BASE = (window.MESSGER && window.MESSGER.API_BASE) || '';
+        const T = (k, v) => (window.MESSGER_I18N ? window.MESSGER_I18N.t(k, v) : k);
 
         // --- 1. Mobile menu toggle (navbar bilan bir xil) ---
         const menuToggle = document.getElementById('menu-toggle');
@@ -157,10 +161,10 @@
         }
 
         if (access) {
-            loginBtn.textContent = 'Xabarlar';
+            loginBtn.textContent = T('nav.messages');
             loginBtn.href = 'messenger.html';
         } else {
-            loginBtn.textContent = 'Kirish';
+            loginBtn.textContent = T('nav.login');
             loginBtn.href = 'login.html';
         }
 
@@ -189,10 +193,10 @@
         const avatarEl = document.getElementById('profile-avatar');
 
         function fillProfile(u) {
-            const uname = (u && (u.display_name || u.username)) || 'Foydalanuvchi';
-            const unick = (u && u.username) || 'foydalanuvchi';
+            const uname = (u && (u.display_name || u.username)) || T('profile.fallback_name');
+            const unick = (u && u.username) || T('profile.fallback_username');
             const umail = (u && u.email) || 'email@example.com';
-            const ubio = (u && u.bio) || 'Salom! Men Messger\'da sizga xabar yozaman. 🚀';
+            const ubio = (u && u.bio) || T('profile.fallback_bio');
             const uavatar = (u && u.avatar) || null;
 
             setText('profile-name', uname.split(' ')[0]);
@@ -220,6 +224,49 @@
         }
 
         fillProfile(user);
+
+        // --- Public profil havolasi: /open/<username> ---
+        function profilePublicLink() {
+            const unick = (user && user.username) || '';
+            if (!unick) return '';
+            return window.location.origin + '/open/' + encodeURIComponent(unick);
+        }
+        function miniToast(text) {
+            let el = document.getElementById('mini-toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'mini-toast';
+                el.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);' +
+                    'background:var(--accent,#4f8cff);color:#fff;padding:10px 16px;border-radius:10px;' +
+                    'font-size:14px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:90vw;' +
+                    'word-break:break-all;opacity:0;transition:opacity .2s';
+                document.body.appendChild(el);
+            }
+            el.textContent = text;
+            el.style.opacity = '1';
+            clearTimeout(miniToast._t);
+            miniToast._t = setTimeout(() => { el.style.opacity = '0'; }, 2600);
+        }
+        function copyProfileLink() {
+            const link = profilePublicLink();
+            if (!link) { miniToast(T('common.error')); return; }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link)
+                    .then(() => miniToast(T('profile.link_copied') + ': ' + link))
+                    .catch(() => window.prompt(T('profile.copy_link') + ':', link));
+            } else {
+                window.prompt(T('profile.copy_link') + ':', link);
+            }
+        }
+        ['profile-username', 'side-username'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.cursor = 'pointer';
+            el.title = T('profile.copy_hint');
+            el.addEventListener('click', copyProfileLink);
+        });
+        document.getElementById('copy-link-btn').addEventListener('click', copyProfileLink);
+        document.addEventListener('langchange', () => fillProfile(user));
 
         async function refreshProfile() {
             const token = localStorage.getItem('access');
@@ -256,7 +303,7 @@
             const newAvatar = document.getElementById('edit-avatar').value.trim();
 
             if (!newName) {
-                status.textContent = 'Ism bo\'sh bo\'lishi mumkin emas.';
+                status.textContent = T('profile.err_name');
                 status.style.display = 'block';
                 return;
             }
@@ -269,7 +316,7 @@
             });
 
             if (token) {
-                status.textContent = 'Saqlanmoqda...';
+                status.textContent = T('profile.saving');
                 status.style.display = 'block';
                 status.style.color = 'var(--text-secondary)';
                 status.style.background = 'transparent';
@@ -286,11 +333,11 @@
                         user = await res.json();
                         status.style.display = 'none';
                     } else {
-                        status.textContent = 'Serverda saqlanmadi. Local saqlandi.';
+                        status.textContent = T('profile.saved_local');
                         status.style.display = 'block';
                     }
                 } catch (err) {
-                    status.textContent = 'Serverga ulanishmadi. Local saqlandi.';
+                    status.textContent = T('profile.err_conn');
                     status.style.display = 'block';
                 }
             }

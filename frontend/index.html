@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messger — Tezkor, Xavfsiz va Zamonaviy Messenger</title>
+    <title data-i18n="landing.doc_title">Messger — Tezkor, Xavfsiz va Zamonaviy Messenger</title>
+    <script src="i18n.js"></script>
     <link rel="stylesheet" href="styles.css">
     <!-- Google Fonts for modern typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,14 +24,15 @@
                 <span class="logo-text">Messger</span>
             </div>
             <nav class="nav-links">
-                <a href="#features">Imkoniyatlar</a>
-                <a href="#demo">Jonli Demo</a>
-                <a href="#about">Biz haqimizda</a>
+                <a href="#features" data-i18n="landing.nav_features">Imkoniyatlar</a>
+                <a href="#demo" data-i18n="landing.nav_demo">Jonli Demo</a>
+                <a href="#about" data-i18n="landing.nav_about">Biz haqimizda</a>
             </nav>
             <div class="nav-cta">
+                <div class="lang-switch" style="margin-right:10px;"></div>
                 <button class="btn btn-secondary" id="theme-toggle" aria-label="Mavzuni o'zgartirish">🌓</button>
-                <a href="messenger.html" class="btn btn-secondary">Ilova</a>
-                <a href="login.html" class="btn btn-primary">Kirish</a>
+                <a href="messenger.html" class="btn btn-secondary" data-i18n="landing.app">Ilova</a>
+                <a href="login.html" class="btn btn-primary" data-i18n="landing.login">Kirish</a>
             </div>
             <button class="mobile-menu-toggle" id="menu-toggle">
                 <span></span>
@@ -44,25 +46,25 @@
     <section class="hero">
         <div class="container hero-container">
             <div class="hero-content">
-                <div class="badge">🚀 Yangi Avlod Chat Tizimi</div>
-                <h1>Chegarasiz muloqot va <span class="gradient-text">maksimal xavfsizlik</span></h1>
-                <p>Messger yordamida dunyoning istalgan nuqtasidagi yaqinlaringiz bilan real vaqt rejimida bog'laning. End-to-end xavfsizlik protokollari va chaqmoqdek tezkor WebSocket tizimi bilan.</p>
+                <div class="badge" data-i18n="landing.hero_badge">🚀 Yangi Avlod Chat Tizimi</div>
+                <h1 data-i18n-html="landing.hero_title_html">Chegarasiz muloqot va <span class="gradient-text">maksimal xavfsizlik</span></h1>
+                <p data-i18n="landing.hero_desc">Messger yordamida dunyoning istalgan nuqtasidagi yaqinlaringiz bilan real vaqt rejimida bog'laning. End-to-end xavfsizlik protokollari va chaqmoqdek tezkor WebSocket tizimi bilan.</p>
                 <div class="hero-actions">
-                    <a href="messenger.html" class="btn btn-primary btn-large">Desktop Ilovani Ochish</a>
-                    <a href="#features" class="btn btn-outline btn-large">Batafsil ma'lumot</a>
+                    <a href="messenger.html" class="btn btn-primary btn-large" data-i18n="landing.cta_app">Desktop Ilovani Ochish</a>
+                    <a href="#features" class="btn btn-outline btn-large" data-i18n="landing.cta_more">Batafsil ma'lumot</a>
                 </div>
                 <div class="hero-stats">
                     <div class="stat-item">
                         <span class="stat-num">0ms</span>
-                        <span class="stat-label">Kechikish</span>
+                        <span class="stat-label" data-i18n="landing.stat_fast_d">Kechikish</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-num">100%</span>
-                        <span class="stat-label">Xavfsiz</span>
+                        <span class="stat-label" data-i18n="landing.stat_secure_d">Xavfsiz</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-num">Open</span>
-                        <span class="stat-label">Source</span>
+                        <span class="stat-label" data-i18n="landing.stat_open_d">Source</span>
                     </div>
                 </div>
             </div>
@@ -116,30 +118,30 @@
     <section id="features" class="features">
         <div class="container">
             <div class="section-header">
-                <h2>Nega aynan <span class="gradient-text">Messger</span>?</h2>
-                <p>Loyiha ilg'or texnologiyalar va mukammal foydalanuvchi interfeysini birlashtiradi</p>
+                <h2 data-i18n-html="landing.feat_title_html">Nega aynan <span class="gradient-text">Messger</span>?</h2>
+                <p data-i18n="landing.feat_desc">Loyiha ilg'or texnologiyalar va mukammal foydalanuvchi interfeysini birlashtiradi</p>
             </div>
             
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h3>Real-time Aloqa</h3>
-                    <p>WebSockets yordamida xabarlar soniyaning ulushlarida yetib boradi. Hech qanday sahifani yangilash talab qilinmaydi.</p>
+                    <h3 data-i18n="landing.f1_t">Real-time Aloqa</h3>
+                    <p data-i18n="landing.f1_d">WebSockets yordamida xabarlar soniyaning ulushlarida yetib boradi. Hech qanday sahifani yangilash talab qilinmaydi.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🔒</div>
-                    <h3>E2E Shifrlash</h3>
-                    <p>Sizning shaxsiy chatlaringiz faqat siz va suhbatdoshingiz uchun ochiq. Ma'lumotlar to'liq himoyalangan.</p>
+                    <h3 data-i18n="landing.f2_t">E2E Shifrlash</h3>
+                    <p data-i18n="landing.f2_d">Sizning shaxsiy chatlaringiz faqat siz va suhbatdoshingiz uchun ochiq. Ma'lumotlar to'liq himoyalangan.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">📁</div>
-                    <h3>Media va Fayllar</h3>
-                    <p>Rasmlar, videolar, audio xabarlar va har qanday formatdagi fayllarni bir zumda yuklang va almashing.</p>
+                    <h3 data-i18n="landing.f3_t">Media va Fayllar</h3>
+                    <p data-i18n="landing.f3_d">Rasmlar, videolar, audio xabarlar va har qanday formatdagi fayllarni bir zumda yuklang va almashing.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🎨</div>
-                    <h3>Zamonaviy UI/UX</h3>
-                    <p>Ko'zni charchatmaydigan va moslashuvchan dizayn. Qorong'u va yorug'lik rejimlari hamda silliq animatsiyalar.</p>
+                    <h3 data-i18n="landing.f4_t">Zamonaviy UI/UX</h3>
+                    <p data-i18n="landing.f4_d">Kunduzgi va tungi rejim, barcha qurilmalarga moslashgan interfeys.</p>
                 </div>
             </div>
         </div>
@@ -149,8 +151,8 @@
     <section id="demo" class="demo-section">
         <div class="container">
             <div class="section-header">
-                <h2>Ilova <span class="gradient-text">Interfeysi</span></h2>
-                <p>Chiroyli, sodda va barcha qurilmalarga moslashuvchan ko'rinish</p>
+                <h2 data-i18n-html="landing.demo_title_html">Ilova <span class="gradient-text">Interfeysi</span></h2>
+                <p data-i18n="landing.demo_desc">Chiroyli, sodda va barcha qurilmalarga moslashuvchan ko'rinish</p>
             </div>
             
             <div class="app-dashboard-mockup">
@@ -246,10 +248,10 @@
                     <span class="logo-icon">💬</span>
                     <span class="logo-text">Messger</span>
                 </div>
-                <p>Messger — zamonaviy texnologiyalar asosida qurilgan eng mukammal va xavfsiz chat ekotizimi.</p>
+                <p data-i18n="landing.footer_desc">Messger — zamonaviy texnologiyalar asosida qurilgan eng mukammal va xavfsiz chat ekotizimi.</p>
             </div>
             <div class="footer-links">
-                <h4>Texnologiyalar</h4>
+                <h4 data-i18n="landing.footer_tech">Texnologiyalar</h4>
                 <ul>
                     <li>HTML5 & CSS3</li>
                     <li>Vanilla JavaScript</li>
@@ -258,7 +260,7 @@
                 </ul>
             </div>
             <div class="footer-links">
-                <h4>Loyiha Bosqichlari</h4>
+                <h4 data-i18n="landing.footer_stages">Loyiha Bosqichlari</h4>
                 <ul>
                     <li>HTML/CSS Fundamentlari</li>
                     <li>WebSocket Integratsiyasi</li>
@@ -269,7 +271,7 @@
         </div>
         <div class="footer-bottom">
             <div class="container">
-                <p>&copy; 2026 Messger. Barcha huquqlar himoyalangan. Loyiha ochiq kodli.</p>
+                <p>&copy; 2026 Messger. <span data-i18n="landing.footer_rights">Barcha huquqlar himoyalangan.</span></p>
             </div>
         </div>
     </footer>

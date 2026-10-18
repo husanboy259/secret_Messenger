@@ -117,7 +117,7 @@
 
             <div class="search">
                 <svg class="ico search__ico"><use href="#i-search"/></svg>
-                <input type="search" id="searchInput" placeholder="Search" autocomplete="off" aria-label="Qidirish">
+                <input type="search" id="searchInput" placeholder="Search" data-i18n-placeholder="app.search" autocomplete="off" aria-label="Qidirish">
                 <button class="search__clear" id="searchClear" type="button" aria-label="Tozalash" hidden>
                     <svg class="ico"><use href="#i-close"/></svg>
                 </button>
@@ -224,7 +224,7 @@
                 <div class="composer__row">
                     <input type="file" id="fileInput" accept="image/*,video/*,audio/*" hidden>
                     <button class="icon-btn icon-btn--ghost" id="btnClip" type="button" title="Rasm / video yuborish" aria-label="Fayl biriktirish"><svg class="ico"><use href="#i-clip"/></svg></button>
-                    <textarea id="messageInput" rows="1" placeholder="Message" aria-label="Xabar yozish"></textarea>
+                    <textarea id="messageInput" rows="1" placeholder="Message" data-i18n-placeholder="app.message" aria-label="Xabar yozish"></textarea>
                     <button class="icon-btn icon-btn--ghost" type="button" title="Emoji" aria-label="Emoji"><svg class="ico"><use href="#i-smile"/></svg></button>
                     <button class="icon-btn icon-btn--ghost" id="btnMic" type="button" title="Ovozli xabar" aria-label="Ovozli xabar"><svg class="ico"><use href="#i-mic"/></svg></button>
                     <button class="icon-btn icon-btn--send" id="btnSend" type="button" title="Yuborish" aria-label="Yuborish"><svg class="ico"><use href="#i-send"/></svg></button>
@@ -407,7 +407,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="contactsTitle">Kontaktlar</h2>
+                <h2 class="modal__title" id="contactsTitle" data-i18n="settings.contacts">Kontaktlar</h2>
                 <p class="modal__sub">Chat boshlash uchun bosing</p>
             </div>
             <button class="icon-btn" type="button" data-close="#contactsModal" aria-label="Yopish">
@@ -428,7 +428,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="folderTitle">Yangi papka</h2>
+                <h2 class="modal__title" id="folderTitle" data-i18n="settings.new_folder">Yangi papka</h2>
                 <p class="modal__sub">Chatlar papkaga qo'shiladi</p>
             </div>
             <button class="icon-btn" type="button" data-close="#folderModal" aria-label="Yopish">
@@ -472,7 +472,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="membersTitle">A'zolar va adminlar</h2>
+                <h2 class="modal__title" id="membersTitle" data-i18n="app.members_title">A'zolar va adminlar</h2>
                 <p class="modal__sub" id="membersSub">Kanalga faqat adminlar yoza oladi</p>
             </div>
             <button class="icon-btn" type="button" data-close="#membersModal" aria-label="Yopish">
@@ -508,7 +508,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="infoTitle">Ma'lumot</h2>
+                <h2 class="modal__title" id="infoTitle" data-i18n="open.about">Ma'lumot</h2>
                 <p class="modal__sub" id="infoSub">A'zolar</p>
             </div>
             <button class="icon-btn" type="button" data-close="#infoModal" aria-label="Yopish">
@@ -548,7 +548,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="manageTitle">Boshqarish</h2>
+                <h2 class="modal__title" id="manageTitle" data-i18n="app.manage">Boshqarish</h2>
                 <p class="modal__sub" id="manageSub"></p>
             </div>
             <button class="icon-btn" type="button" data-close="#manageModal" aria-label="Yopish">
@@ -581,7 +581,7 @@
     <div class="modal__card">
         <header class="modal__head">
             <div>
-                <h2 class="modal__title" id="userModalTitle">Profil</h2>
+                <h2 class="modal__title" id="userModalTitle" data-i18n="open.profile">Profil</h2>
                 <p class="modal__sub">Foydalanuvchi ma'lumoti</p>
             </div>
             <button class="icon-btn" type="button" data-close="#userModal" aria-label="Yopish">

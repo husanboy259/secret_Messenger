@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ro'yxatdan o'tish — Messger</title>
+    <title data-i18n="reg.doc_title">Ro'yxatdan o'tish — Messger</title>
+    <script src="i18n.js"></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,53 +19,54 @@
                     <span class="logo-icon">💬</span>
                     <span class="logo-text">Messger</span>
                 </div>
-                <h1 class="gradient-text">Hisob yarating<br>suhbatni boshlang</h1>
-                <p>
+                <h1 class="gradient-text" data-i18n-html="reg.hero_title">Hisob yarating<br>suhbatni boshlang</h1>
+                <p data-i18n="reg.hero_desc">
                     Bir daqiqada ro'yxatdan o'ting va do'stlaringiz bilan
                     real-time muloqotni boshlang.
                 </p>
                 <div class="brand-chat-mock">
-                    <div class="mock-bubble in">Yangi xabaringiz bor 📩</div>
-                    <div class="mock-bubble out">Ro'yxatdan o'tish 1 daqiqa davom etadi ✨</div>
+                    <div class="mock-bubble in" data-i18n="reg.mock1">Yangi xabaringiz bor 📩</div>
+                    <div class="mock-bubble out" data-i18n="reg.mock2">Ro'yxatdan o'tish 1 daqiqa davom etadi ✨</div>
                 </div>
             </div>
         </div>
 
         <div class="auth-panel">
-            <a href="index.html" class="back-home"><span>←</span> Bosh sahifaga qaytish</a>
+            <a href="index.html" class="back-home"><span>&#8592;</span> <span data-i18n="auth.back_home">Bosh sahifaga qaytish</span></a>
+            <div class="lang-switch" style="margin:0 0 12px;"></div>
 
             <div class="auth-card wide">
                 <div class="auth-header">
-                    <h2>Ro'yxatdan o'tish</h2>
-                    <p>Messger'ga qo'shiling</p>
+                    <h2 data-i18n="reg.title">Ro'yxatdan o'tish</h2>
+                    <p data-i18n="reg.subtitle">Messger hisobingizga kiring</p>
                 </div>
 
                 <form id="register-form">
                     <div class="form-group">
-                        <label for="username">Foydalanuvchi nomi</label>
+                        <label for="username" data-i18n="reg.username">Foydalanuvchi nomi</label>
                         <input type="text" id="username" class="form-control" placeholder="sardor_dev" required>
                     </div>
                     <div class="form-group">
-                        <label for="email">Email <span class="optional">(ixtiyoriy)</span></label>
-                        <input type="email" id="email" class="form-control" placeholder="sardor@example.com">
+                        <label for="email"><span data-i18n="reg.email">Email</span> <span class="optional">(<span data-i18n="reg.optional">ixtiyoriy</span>)</span></label>
+                        <input type="email" id="email" class="form-control" placeholder="sardor@example.com" data-i18n-placeholder="reg.email_ph">
                     </div>
                     <div class="form-group">
-                        <label for="password">Parol</label>
-                        <input type="password" id="password" class="form-control" placeholder="kamida 8 belgi" required minlength="8">
+                        <label for="password" data-i18n="reg.password">Parol</label>
+                        <input type="password" id="password" class="form-control" placeholder="kamida 8 belgi" required minlength="8" data-i18n-placeholder="reg.password_hint">
                         <div class="pw-meter" id="pw-meter" data-score="0"><span></span><span></span><span></span><span></span></div>
                         <span class="pw-hint" id="pw-hint"></span>
                     </div>
                     <div class="form-group">
-                        <label for="password2">Parolni takrorlang</label>
+                        <label for="password2" data-i18n="reg.password2">Parolni takrorlang</label>
                         <input type="password" id="password2" class="form-control" placeholder="••••••••" required>
                         <span class="field-error" id="pw-match-error"></span>
                     </div>
                     <div id="form-error" class="form-error" role="alert" style="display:none;"></div>
-                    <button type="submit" class="btn btn-primary">Ro'yxatdan o'tish</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="reg.submit">Ro'yxatdan o'tish</button>
                 </form>
 
                 <div class="auth-card-bottom">
-                    Hisobingiz bormi? <a href="login.html">Kirish</a>
+                    <span data-i18n="reg.have_account">Hisobingiz bormi?</span> <a href="login.html" data-i18n="reg.login">Kirish</a>
                 </div>
             </div>
         </div>
@@ -72,6 +74,7 @@
 
     <script src="config.js"></script>
     <script>
+        const T = (k, v) => (window.MESSGER_I18N ? window.MESSGER_I18N.t(k, v) : k);
         const savedTheme = localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
@@ -94,8 +97,7 @@
             if (/\d/.test(v)) score++;
             if (/[^A-Za-z0-9]/.test(v)) score++;
             pwMeter.dataset.score = score;
-            const labels = ['Juda zaif', 'Zaif', "O'rtacha", 'Yaxshi', "Kuchli"];
-            pwHint.textContent = 'Parol kuchi: ' + labels[score];
+            pwHint.textContent = T('reg.pw_strength') + T('reg.pw' + score);
         });
 
         const form = document.getElementById('register-form');
@@ -115,17 +117,17 @@
             const password = pwInput.value;
 
             if (password !== password2.value) {
-                matchError.textContent = 'Parollar mos kelmadi.';
+                matchError.textContent = T('reg.err_match');
                 return;
             }
             if (password.length < 8) {
-                errorBox.textContent = 'Parol kamida 8 belgidan iborat bo\'lishi kerak.';
+                errorBox.textContent = T('reg.err_short');
                 errorBox.style.display = 'block';
                 return;
             }
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Yuklanmoqda...';
+            submitBtn.textContent = T('common.loading');
 
             try {
                 const response = await fetch(API_URL, {
@@ -145,7 +147,7 @@
                     const firstError = Object.values(data)[0];
                     errorBox.textContent = Array.isArray(firstError)
                         ? firstError[0]
-                        : (firstError || 'Ro\'yxatdan o\'tish muvaffaqiyatsiz.');
+                        : (firstError || T('reg.err_default'));
                     errorBox.style.display = 'block';
                     return;
                 }
@@ -159,11 +161,11 @@
                 }
                 window.location.href = 'messenger.html';
             } catch (err) {
-                errorBox.textContent = "Serverga ulanib bo'lmadi. Django ishlayotganini tekshiring.";
+                errorBox.textContent = T('reg.err_server');
                 errorBox.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = "Ro'yxatdan o'tish";
+                submitBtn.textContent = T('reg.submit');
             }
         });
     </script>

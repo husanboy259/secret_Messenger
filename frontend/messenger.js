@@ -1532,6 +1532,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /* /open/<username> — ommaviy profil havolasi */
+    function profileLink(username) {
+        const h = String(username || '').replace(/^@/, '').trim();
+        return location.origin + '/open/' + encodeURIComponent(h);
+    }
+    function userHandleHTML(username, cls) {
+        const h = String(username || '').replace(/^@/, '').trim();
+        if (!h) return '';
+        return `<button class="${cls || 'info-head__user'} info-head__link" type="button" data-profile-link="${escapeHTML(h)}" title="${escapeHTML(profileLink(h))}">@${escapeHTML(h)}</button>`;
+    }
+    async function shareProfileLink(username) {
+        const h = String(username || '').replace(/^@/, '').trim();
+        if (!h) { toast("Username yo'q"); return; }
+        const link = profileLink(h);
+        await copyToClipboard(link);
+        toast('Profil havolasi: ' + link);
+    }
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-profile-link]');
+        if (!el) return;
+        e.preventDefault();
+        e.stopPropagation();
+        shareProfileLink(el.getAttribute('data-profile-link'));
+    });
+
     async function reactTo(msg, kind) {
         if (!msg.id || !kind) return;
         try {
@@ -1854,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         state.infoMembers = list;
         const online = list.filter(m => m.user && m.user.is_online).length;
-        const uname = chat.username ? `<span class="info-head__user">@${escapeHTML(chat.username)}</span>` : '';
+        const uname = chat.username ? userHandleHTML(chat.username) : '';
         const about = chat.about ? `<p class="info-head__about">${escapeHTML(chat.about)}</p>` : '';
         dom.infoHead.innerHTML = `
             ${chatAvatarHTML(chat, 'lg')}
@@ -1981,7 +2006,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.userModalHead.innerHTML = `
             ${avatarHTML(u, 'lg')}
             <div class="info-head__name">${escapeHTML(u.display_name || u.username)}</div>
-            <span class="info-head__user">@${escapeHTML(u.username || '')}</span>
+            ${userHandleHTML(u.username)}
             ${u.bio ? `<p class="info-head__about">${escapeHTML(u.bio)}</p>` : ''}
             <div class="info-head__stats">${u.is_online ? 'online' : 'offline'}</div>`;
         dom.userModalMsg.onclick = () => {

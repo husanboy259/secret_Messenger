@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kirish — Messger</title>
+    <title data-i18n="login.doc_title">Kirish — Messger</title>
+    <script src="i18n.js"></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,56 +20,57 @@
                     <span class="logo-icon">💬</span>
                     <span class="logo-text">Messger</span>
                 </div>
-                <h1 class="gradient-text">Do'stlaringiz bilan<br>yana bog'laning</h1>
-                <p>
+                <h1 class="gradient-text" data-i18n-html="login.hero_title">Do'stlaringiz bilan<br>yana bog'laning</h1>
+                <p data-i18n="login.hero_desc">
                     Tezkor, xavfsiz va real-time xabarlar. Qaysi qurilmada bo'lishingizdan
                     qat'i nazar — do'stlaringiz har doim yaqin.
                 </p>
 
                 <div class="brand-chat-mock">
-                    <div class="mock-bubble in">Salom! Tanishganimdan xursandman 🎉</div>
-                    <div class="mock-bubble out">Men ham! Real-time xabarlar ishlamoqda ⚡</div>
+                    <div class="mock-bubble in" data-i18n="login.mock1">Salom! Tanishganimdan xursandman 🎉</div>
+                    <div class="mock-bubble out" data-i18n="login.mock2">Men ham! Real-time xabarlar ishlamoqda ⚡</div>
                 </div>
 
                 <div class="brand-stats">
-                    <div><strong>24/7</strong><span>Onlayn</span></div>
-                    <div><strong>100%</strong><span>Bepul</span></div>
-                    <div><strong>🔒</strong><span>Xavfsiz</span></div>
+                    <div><strong>24/7</strong><span data-i18n="login.brand_online">Onlayn</span></div>
+                    <div><strong>100%</strong><span data-i18n="login.brand_free">Bepul</span></div>
+                    <div><strong>🔒</strong><span data-i18n="login.brand_safe">Xavfsiz</span></div>
                 </div>
             </div>
         </div>
 
         <!-- O'ng panel: Login formasi -->
         <div class="auth-panel">
-            <a href="index.html" class="back-home"><span>←</span> Bosh sahifaga qaytish</a>
+            <a href="index.html" class="back-home"><span>←</span> <span data-i18n="auth.back_home">Bosh sahifaga qaytish</span></a>
+            <div class="lang-switch" style="margin:0 0 12px;"></div>
 
             <div class="auth-card wide">
                 <div class="auth-header">
-                    <h2>Xush kelibsiz!</h2>
-                    <p>Messger hisobingizga kiring</p>
+                    <h2 data-i18n="login.welcome">Xush kelibsiz!</h2>
+                    <p data-i18n="login.subtitle">Messger hisobingizga kiring</p>
                 </div>
 
                 <form id="login-form">
                     <div class="form-group">
-                        <label for="username">Foydalanuvchi nomi yoki Email</label>
-                        <input type="text" id="username" class="form-control" placeholder="Masalan: sardor_dev" required>
+                        <label for="username" data-i18n="login.username">Foydalanuvchi nomi yoki Email</label>
+                        <input type="text" id="username" class="form-control" placeholder="Masalan: sardor_dev" data-i18n-placeholder="login.username_ph" required>
                     </div>
                     <div class="form-group">
-                        <label for="password">Parol</label>
+                        <label for="password" data-i18n="login.password">Parol</label>
                         <input type="password" id="password" class="form-control" placeholder="••••••••" required>
                     </div>
                     <div class="form-footer">
                         <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                            <input type="checkbox" style="accent-color: var(--accent-color);"> Meni eslab qol
+                            <input type="checkbox" style="accent-color: var(--accent-color);"> <span data-i18n="login.remember">Meni eslab qol</span>
                         </label>
-                        <a href="#">Parolni unutdingizmi?</a>
+                        <a href="#" data-i18n="login.forgot">Parolni unutdingizmi?</a>
                     </div>
                     <div id="form-error" class="form-error" role="alert" style="display:none;"></div>
-                    <button type="submit" class="btn btn-primary">Kirish</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="login.submit">Kirish</button>
                 </form>
 
                 <div class="auth-card-bottom">
-                    Hisobingiz yo'qmi? <a href="register.html">Ro'yxatdan o'tish</a>
+                    <span data-i18n="login.no_account">Hisobingiz yo'qmi?</span> <a href="register.html" data-i18n="login.register">Ro'yxatdan o'tish</a>
                 </div>
             </div>
         </div>
@@ -76,6 +78,8 @@
 
     <script src="config.js"></script>
     <script>
+        const T = (k, v) => (window.MESSGER_I18N ? window.MESSGER_I18N.t(k, v) : k);
+
         const savedTheme = localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
@@ -84,7 +88,7 @@
         if (new URLSearchParams(window.location.search).get('registered') === '1') {
             const errorBox = document.getElementById('form-error');
             errorBox.style.display = 'block';
-            errorBox.textContent = "Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi kiring. 🎉";
+            errorBox.textContent = T('login.registered_ok');
             errorBox.style.background = 'rgba(16, 185, 129, 0.12)';
             errorBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
             errorBox.style.color = '#34d399';
@@ -108,13 +112,13 @@
             const password = passwordInput.value;
 
             if (!username || !password) {
-                errorBox.textContent = 'Username va parolni to\'ldiring.';
+                errorBox.textContent = T('login.err_fill');
                 errorBox.style.display = 'block';
                 return;
             }
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Yuklanmoqda...';
+            submitBtn.textContent = T('common.loading');
 
             try {
                 const response = await fetch(API_URL, {
@@ -144,11 +148,11 @@
                 const next = new URLSearchParams(window.location.search).get('next');
                 window.location.href = (next && next.startsWith('/')) ? next : 'messenger.html';
             } catch (err) {
-                errorBox.textContent = "Serverga ulanib bo'lmadi. Django ishlayotganini tekshiring.";
+                errorBox.textContent = T('login.err_server');
                 errorBox.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Kirish';
+                submitBtn.textContent = T('login.submit');
             }
         });
     </script>
