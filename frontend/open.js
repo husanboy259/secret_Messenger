@@ -147,16 +147,12 @@
 
         btnMsg.onclick = function () {
             var access = localStorage.getItem('access');
-            var base = location.origin + (location.pathname.indexOf('/open/') !== -1 ? location.pathname.replace(/\/open\/.*/, '') : '');
+            var target = 'messenger.html?user=' + encodeURIComponent(data.username);
             if (!access) {
-                location.href = 'login.html?next=' + encodeURIComponent('/messenger.html');
+                location.href = 'login.html?next=' + encodeURIComponent('/' + target);
                 return;
             }
-            if (data.type === 'user') {
-                location.href = 'messenger.html?user=' + encodeURIComponent(data.username);
-            } else {
-                location.href = 'messenger.html?chat=' + encodeURIComponent(data.username);
-            }
+            location.href = target;
         };
 
         if (data.type === 'user') {
