@@ -13,6 +13,7 @@ from accounts.views import (
     ContactViewSet,
     EventViewSet,
     MeView,
+    PublicProfileView,
     UserListView,
     UserSettingsView,
 )
@@ -44,10 +45,14 @@ DEV_PAGES = (
     'join.html',
     'join.css',
     'join.js',
+    'open.html',
+    'open.css',
+    'open.js',
+    'i18n.js',
 )
 
 
-def dev_file(request, filename):
+def dev_file(request, filename, **kwargs):
     """frontend/ papkasidagi frontend fayllarini beradi (faqat DEBUG=True da)."""
     if not settings.DEBUG or filename not in DEV_PAGES:
         raise Http404('Sahifa topilmadi.')
@@ -75,6 +80,12 @@ urlpatterns = [
     path('join.html', dev_file, {'filename': 'join.html'}, name='join_page'),
     path('join.css', dev_file, {'filename': 'join.css'}),
     path('join.js', dev_file, {'filename': 'join.js'}),
+    path('open.html', dev_file, {'filename': 'open.html'}),
+    path('open.css', dev_file, {'filename': 'open.css'}),
+    path('open.js', dev_file, {'filename': 'open.js'}),
+    path('i18n.js', dev_file, {'filename': 'i18n.js'}),
+    path('open/<str:username>', dev_file, {'filename': 'open.html'}),
+    path('open/<str:username>/', dev_file, {'filename': 'open.html'}),
 
     path('admin/', admin.site.urls),
 
@@ -83,6 +94,7 @@ urlpatterns = [
 
     # --- Auth ---
     path('api/', include('accounts.urls')),
+    path('api/public/<str:username>/', PublicProfileView.as_view(), name='public_profile'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/users/me/', MeView.as_view(), name='me'),

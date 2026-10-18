@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil — Messger</title>
+
+    <!-- Havola ulashilganda ko'rinadigan karta (Telegram/WhatsApp/Instagram preview) -->
+    <meta property="og:type" content="profile">
+    <meta property="og:site_name" content="Messger">
+    <meta property="og:title" content="Messger" id="ogTitle">
+    <meta property="og:description" content="Messger'da profilni ochish" id="ogDesc">
+    <meta property="og:image" content="https://secret-messenger-sepia-xi.vercel.app/favicon.ico" id="ogImage">
+    <meta property="og:url" content="" id="ogUrl">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Messger" id="twTitle">
+    <meta name="twitter:description" content="Messger'da profilni ochish" id="twDesc">
+
+    <link rel="stylesheet" href="open.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="open-wrap">
+        <div class="open-card" id="openCard" hidden>
+            <div class="open-cover"></div>
+            <div class="open-body">
+                <div class="open-avatar" id="openAvatar">?</div>
+                <h1 class="open-name" id="openName">Yuklanmoqda…</h1>
+                <p class="open-username" id="openUsername"></p>
+                <span class="open-badge" id="openBadge" hidden></span>
+                <p class="open-about" id="openAbout"></p>
+                <p class="open-meta" id="openMeta"></p>
+                <div class="open-error" id="openError" hidden></div>
+                <div class="open-actions">
+                    <button class="open-btn open-btn--primary" id="openMsgBtn" type="button" data-i18n="open.message">Xabar yozish</button>
+                    <button class="open-btn open-btn--ghost" id="openJoinBtn" type="button" hidden data-i18n="open.join">Qo'shilish</button>
+                    <button class="open-btn open-btn--ghost" id="openOpenBtn" type="button" hidden data-i18n="open.open_chat">Chatni ochish</button>
+                    <button class="open-btn open-btn--ghost" id="openCopyBtn" type="button" data-i18n="open.copy_link">Havolani nusxalash</button>
+                    <button class="open-btn open-btn--ghost" id="openAppBtn" type="button" data-i18n="open.open_in_app">Messger'da ochish</button>
+                </div>
+                <p class="open-hint" id="openHint" hidden></p>
+            </div>
+        </div>
+
+        <div class="open-card" id="openSkeleton">
+            <div class="open-cover"></div>
+            <div class="open-body open-skeleton">
+                <span data-i18n="open.loading_profile">Profil yuklanmoqda…</span>
+            </div>
+        </div>
+
+        <div class="open-card" id="openNotFound" hidden>
+            <div class="open-cover"></div>
+            <div class="open-body">
+                <h1 class="open-name" data-i18n="open.not_found">Profil topilmadi</h1>
+                <p class="open-about" data-i18n="open.not_found_desc">Bu havola o'chirilgan yoki noto'g'ri kiritilgan.</p>
+                <div class="open-actions">
+                    <a class="open-btn open-btn--primary" href="index.html" data-i18n="open.back">Bosh sahifa</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="lang-switch">
+            <button type="button" data-lang="uz">O'zbekcha</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="en">English</button>
+        </div>
+        <a class="open-back" href="index.html">← <span data-i18n="open.back">Bosh sahifa</span></a>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="i18n.js"></script>
+    <script src="open.js"></script>
+</body>
+</html>

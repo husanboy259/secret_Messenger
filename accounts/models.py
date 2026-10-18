@@ -48,17 +48,25 @@ class Account(models.Model):
 
 
 class UserSettings(models.Model):
-    """Frontend saqlaydigan sozlamalar (Night Mode, accent, Enter bilan yuborish)."""
+    """Frontend saqlaydigan sozlamalar (Night Mode, accent, til, Enter bilan yuborish)."""
 
     class Theme(models.TextChoices):
         NIGHT = 'night', 'Night'
         DAY = 'day', 'Day'
+
+    class Language(models.TextChoices):
+        UZ = 'uz', "O'zbekcha"
+        RU = 'ru', 'Русский'
+        EN = 'en', 'English'
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='settings'
     )
     theme = models.CharField(max_length=5, choices=Theme.choices, default=Theme.NIGHT)
     accent = models.CharField(max_length=20, default='#8b5cf6')
+    language = models.CharField(
+        max_length=5, choices=Language.choices, default=Language.UZ
+    )
     send_on_enter = models.BooleanField(default=True)
     show_birthday_banner = models.BooleanField(default=True)
     wallpaper = models.URLField(blank=True)

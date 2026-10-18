@@ -5,6 +5,9 @@
   "framework": null,
   "cleanUrls": false,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/open/:username", "destination": "/open.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

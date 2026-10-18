@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         emojiPop: $('#emojiPop'),
         emojiGrid: $('#emojiGrid'),
         nightSwitch: $('#nightSwitch'),
+        langSelect: $('#langSelect'),
         btnConvBack: $('#btnConvBack'),
         btnConvMenu: $('#btnConvMenu'),
         toast: $('#toast'),
@@ -2729,6 +2730,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (localStorage.getItem('messger-drawer') === 'collapsed') dom.drawer.classList.add('is-collapsed');
 
     /* ─────────────────────────────────────────────────────────────────────
+       13b. LANGUAGE (i18n) — settingsdan tilni almashtirish
+       ───────────────────────────────────────────────────────────────────── */
+
+    function buildLangSelect() {
+        if (!dom.langSelect || !window.MESSGER_I18N) return;
+        const i18n = window.MESSGER_I18N;
+        dom.langSelect.innerHTML = '';
+        i18n.supported.forEach((code) => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = i18n.langName(code);
+            dom.langSelect.appendChild(opt);
+        });
+        dom.langSelect.value = i18n.lang;
+    }
+
+    if (dom.langSelect && window.MESSGER_I18N) {
+        buildLangSelect();
+        dom.langSelect.addEventListener('change', () => {
+            const lang = dom.langSelect.value;
+            window.MESSGER_I18N.setLang(lang);
+            apiJSON('/api/settings/me/', { method: 'PATCH', body: JSON.stringify({ language: lang }) }).catch(() => {});
+            toast(lang === 'ru' ? 'Язык изменён' : lang === 'en' ? 'Language changed' : "Til o'zgartirildi");
+        });
+    }
+
+    async function syncLanguage() {
+        if (!window.MESSGER_I18N) return;
+        try {
+            const s = await apiJSON('/api/settings/me/');
+            if (s && s.language && window.MESSGER_I18N.supported.indexOf(s.language) !== -1) {
+                if (s.language !== window.MESSGER_I18N.lang) {
+                    window.MESSGER_I18N.setLang(s.language);
+                    if (dom.langSelect) dom.langSelect.value = s.language;
+                }
+            }
+        } catch { /* localStorage'dagi til yetarli */ }
+    }
+    if (window.MESSGER_I18N) window.MESSGER_I18N.applyI18n();
+    syncLanguage();
+
+    /* ─────────────────────────────────────────────────────────────────────
        14. SEARCH + KEYS + BANNER
        ───────────────────────────────────────────────────────────────────── */
 
@@ -2809,12 +2852,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadAccounts();
         loadEvents();
         try {
-            const folders = await apiJSON('/api/folders/');
-            state.folders = folders.results || (Array.isArray(folders) ? folders : []);
-        } catch { state.folders = []; }
-        renderRail();
+            const data = await apiJSON(`/api/chats/${chatListParams() ? '?' + chatListParams() : ''}`);
+            state.chats = Array.isArray(data) ? data : (data.results || []);
+            renderChatList();
+        } catch { /* loadChats pastda */ }
         await loadChats();
-        openGlobalSocket();
+        await handleDeepLink();
+    }
+
+    /* /open/<username> sahifasidan kelgan ?user= / ?chat= havolalarini ochadi */
+    async function handleDeepLink() {
+        const params = new URLSearchParams(location.search);
+        const uname = params.get('user');
+        const handle = params.get('chat');
+        if (!uname && !handle) return;
+        try { history.replaceState({}, '', location.pathname); } catch { /* ignore */ }
+
+        if (uname) {
+            try {
+                const data = await apiJSON('/api/users/?search=' + encodeURIComponent(uname));
+                const list = Array.isArray(data) ? data : (data.results || []);
+                const u = list.find(x => (x.username || '').toLowerCase() === uname.toLowerCase());
+                if (u) { await createChat([u.id]); return; }
+            } catch { /* pastda toast */ }
+            toast('Foydalanuvchi topilmadi');
+            return;
+        }
+
+        if (handle) {
+            const chat = state.chats.find(c => (c.username || '').toLowerCase() === handle.toLowerCase());
+            if (chat) { openChat(chat.id); return; }
+            toast('Chat topilmadi');
+        }
     }
 
     boot();

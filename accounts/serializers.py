@@ -207,6 +207,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'theme',
             'accent',
+            'language',
             'send_on_enter',
             'show_birthday_banner',
             'wallpaper',

@@ -194,3 +194,57 @@ class UserListView(generics.ListAPIView):
                 Q(username__icontains=search) | Q(email__icontains=search)
             )
         return qs.distinct().order_by('username')
+
+
+class PublicProfileView(APIView):
+    """GET /api/public/<username>/ — @username bo'yicha ommaviy profil.
+
+    Havola `/open/<username>` ko'rinishida bo'ladi (t.me/username kabi).
+    Avval ommaviy kanal/guruh, keyin oddiy foydalanuvchi qidiriladi.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, username):
+        from chats.models import Chat
+
+        handle = (username or '').lstrip('@').strip()
+        if not handle:
+            return Response({'detail': 'Username kerak.'}, status=400)
+
+        chat = (
+            Chat.objects.filter(username__iexact=handle, is_public=True)
+            .exclude(is_bot=True)
+            .first()
+        )
+        if chat is not None:
+            is_member = False
+            if request.user.is_authenticated:
+                is_member = chat.members.filter(pk=request.user.pk).exists()
+            return Response({
+                'type': 'channel' if chat.is_channel else 'group',
+                'username': chat.username,
+                'display_name': chat.name or chat.username,
+                'avatar': chat.avatar or '',
+                'about': chat.about or '',
+                'is_channel': chat.is_channel,
+                'is_member': is_member,
+                'invite_code': chat.ensure_invite_code(),
+                'members_count': chat.members.count(),
+            })
+
+        user = User.objects.filter(username__iexact=handle, is_active=True).first()
+        if user is not None:
+            return Response({
+                'type': 'user',
+                'username': user.username,
+                'display_name': user.display_name or user.username,
+                'avatar': user.avatar or '',
+                'about': user.bio or '',
+                'emoji_status': user.emoji_status or '',
+                'is_online': user.is_online,
+            })
+
+        return Response(
+            {'detail': 'Bunday profil topilmadi.'}, status=status.HTTP_404_NOT_FOUND
+        )
