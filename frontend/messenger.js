@@ -2581,6 +2581,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             toast(isChannel ? 'Kanal yaratildi' : 'Yangi chat boshlandi');
             await loadChats();
             openChat(chat.id);
+            // Private guruh/kanal — invite-linkni nusxalab qo'yamiz.
+            // Public'da @username linki bo'ladi, private'da sayt o'zi link yaratadi.
+            if (!isPublic && chat && chat.id && (isChannel || extra.type === 'group')) {
+                try {
+                    const inv = await apiJSON(`/api/chats/${chat.id}/invite/`);
+                    const url = inv.url || `${location.origin}/join.html?code=${encodeURIComponent(inv.invite_code)}`;
+                    await navigator.clipboard.writeText(url).catch(() => {});
+                    toast('Invite link nusxalandi');
+                } catch { /* invite olinmasa — chat ichidan ham olish mumkin */ }
+            }
         } catch (err) {
             // Shu suhbat allaqachon mavjud — topib ochamiz
             if (err.message.includes('allaqachon mavjud') && !isChannel) {
