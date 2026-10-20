@@ -218,6 +218,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         addPhotoInput: $('#addPhotoInput'),
         addPhotoBtn: $('#addPhotoBtn'),
         addPhotoClear: $('#addPhotoClear'),
+        addBioWrap: $('#addBioWrap'),
+        addBio: $('#addBio'),
         addPublicWrap: $('#addPublicWrap'),
         addPublic: $('#addPublic'),
         addUsernameWrap: $('#addUsernameWrap'),
@@ -2405,6 +2407,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dom.addPhotoClear) dom.addPhotoClear.hidden = true;
         if (dom.addPublic) dom.addPublic.checked = false;
         if (dom.addUsername) { dom.addUsername.value = ''; }
+        if (dom.addBio) dom.addBio.value = '';
         dom.addCreate.disabled = (mode === 'private');
         renderAddMode();
         renderSelected();
@@ -2424,7 +2427,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isGroupish = addMode === 'group' || addMode === 'channel';
         dom.addNameWrap.hidden = !needsName;
         dom.addName.placeholder = addMode === 'channel' ? 'Kanal nomi' : 'Guruh nomi';
-        [dom.addPhotoWrap, dom.addPublicWrap].forEach(el => { if (el) el.hidden = !isGroupish; });
+        [dom.addPhotoWrap, dom.addBioWrap, dom.addPublicWrap].forEach(el => { if (el) el.hidden = !isGroupish; });
+        if (dom.addBio) dom.addBio.placeholder = addMode === 'channel' ? 'Kanal haqida qisqacha' : 'Guruh haqida qisqacha';
         renderUsernameVisibility();
         dom.addCreate.disabled = addMode === 'private' && selectedUsers.length === 0;
         dom.addCreate.querySelector('.add-create-label').textContent =
@@ -2433,7 +2437,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderUsernameVisibility() {
         if (!dom.addUsernameWrap) return;
-        const show = (addMode === 'channel') || (addMode === 'group' && dom.addPublic && dom.addPublic.checked);
+        // Public tanlanganda (kanal yoki guruh) @username orqali link ochiladi.
+        const show = dom.addPublic && dom.addPublic.checked;
         dom.addUsernameWrap.hidden = !show;
     }
 
@@ -2509,7 +2514,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const name = dom.addName.value.trim();
         const isChannel = addMode === 'channel';
-        const isPublic = isChannel || !!(dom.addPublic && dom.addPublic.checked);
+        const isPublic = !!(dom.addPublic && dom.addPublic.checked);
         const username = (dom.addUsername && dom.addUsername.value || '').trim().replace(/^@/, '');
         if (!name) { dom.addError.textContent = (isChannel ? 'Kanal' : 'Guruh') + ' nomi kerak.'; dom.addError.style.display = 'block'; return; }
         if (!selectedUsers.length) { dom.addError.textContent = 'Kamida bitta foydalanuvchi qo\'shing.'; dom.addError.style.display = 'block'; return; }
@@ -2554,8 +2559,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function createChat(memberIds, extra = {}) {
         const isChannel = extra.is_channel || addMode === 'channel';
         if (!memberIds.length) return;
-        const isPublic = !!(dom.addPublic && dom.addPublic.checked) || isChannel;
+        const isPublic = !!(dom.addPublic && dom.addPublic.checked);
         const username = (dom.addUsername && dom.addUsername.value || '').trim().replace(/^@/, '');
+        const about = (dom.addBio && dom.addBio.value || '').trim();
         dom.addCreate.disabled = true;
         try {
             const chat = await apiJSON('/api/chats/', {
@@ -2568,6 +2574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ...(state.pendingAvatarUrl ? { avatar: state.pendingAvatarUrl } : {}),
                     ...(isPublic ? { is_public: true } : {}),
                     ...(username ? { username } : {}),
+                    ...(about ? { about } : {}),
                 }),
             });
             closeAddChat();
