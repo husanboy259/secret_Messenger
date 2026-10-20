@@ -247,14 +247,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const icon = (id, cls = 'ico') => `<svg class="${cls}"><use href="#${id}"/></svg>`;
 
+    const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+        'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+
+    /* Sana yorlig'i: Bugun / Kecha / Kechadan oldin / 7-sentabr / 2024-yil 2-oktabr */
+    const fmtDateLabel = (d) => {
+        const now = new Date();
+        const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+        const diff = Math.round((startOf(now) - startOf(d)) / 86400000);
+        if (diff === 0) return 'Bugun';
+        if (diff === 1) return 'Kecha';
+        if (diff === 2) return 'Kechadan oldin';
+        const day = d.getDate();
+        const mon = MONTHS[d.getMonth()];
+        if (d.getFullYear() !== now.getFullYear()) return `${d.getFullYear()}-yil ${day}-${mon}`;
+        return `${day}-${mon}`;
+    };
+
     const timeAgo = (iso) => {
         if (!iso) return '';
         const d = new Date(iso);
         if (isNaN(d)) return '';
         const now = new Date();
-        const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-        if (same(d, now)) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) {
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+        return fmtDateLabel(d);
+    };
+
+    /* Xabar pufagi vaqti — har doim HH:MM (sana emas). */
+    const msgTime = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     };
 
     const dayKey = (iso) => {
@@ -265,11 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dayLabel = (iso) => {
         const d = new Date(iso);
         if (isNaN(d)) return '';
-        const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-        const diff = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
-        if (diff === 0) return 'Bugun';
-        if (diff === 1) return 'Kecha';
-        return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+        return fmtDateLabel(d);
     };
 
     const initials = (name = '?') => escapeHTML(name.trim().charAt(0).toUpperCase() || '?');
@@ -551,7 +573,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ${reactions}
                 <span class="bubble__foot">
                     ${edited}
-                    <span class="bubble__time">${msg._time || timeAgo(msg.created_at)}</span>
+                    <span class="bubble__time">${msg._time || msgTime(msg.created_at)}</span>
                     ${out ? `<span class="bubble__ticks ${msg.is_read ? 'is-read' : ''}">${icon('i-check', 'ico ico--xs' + (msg.is_read ? ' is-read' : ''))}</span>` : ''}
                 </span>
             </div>
@@ -1218,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             attachment_detail: attachment || null,
             reply_to_detail: state.replyTo ? { sender: { display_name: 'You' }, content: state.replyTo.text } : null,
             replica: true,
-            _time: timeAgo(new Date().toISOString()),
+            _time: msgTime(new Date().toISOString()),
         };
 
         state.messages.push(optimistic);
