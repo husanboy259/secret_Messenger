@@ -88,28 +88,63 @@ def route_bot_reply(chat, message):
 
     WS (`message.create`, ovozli) ham, REST (`/messages` POST) ham shu funksiyani
     chaqiradi. Javob background thread'da tayyorlanadi, shunda foydalanuvchi
-    so'rovi bloklanmaydi.
+    so'rovi bloklanmaydi. Ayni paytda chatda "yozmoqda" indikatori ko'rsatiladi.
     """
     if not chat.is_bot:
         return None
     if not settings.AI_ENABLED:
         return None
-    if message.sender_id == get_support_bot().pk:
+    bot = get_support_bot()
+    if message.sender_id == bot.pk:
         return None  # bot o'z javobiga qayta javob bermaydi
     if not settings.AI_API_KEY:
         logger.warning("AI_ENABLED=True, lekin AI_API_KEY bo'sh — support javobsiz.")
         return None
 
+    stop_typing = _start_typing(chat, bot)
     threading.Thread(
         target=build_bot_reply,
-        args=(chat.id, message.id),
+        args=(chat.id, message.id, stop_typing),
         daemon=True,
         name='ai-support-reply',
     ).start()
     return None
 
 
-def build_bot_reply(chat_id, message_id):
+def _start_typing(chat, bot):
+    """Bot javob tayyorlayotganda `chat.typing` yuborib turadi.
+
+    Qaytariladigan obyekt — `threading.Event`: `set()` qilinganda yuborish to'xtaydi.
+    Frontend har `chat.typing` da indikatorni qayta yangilaydi (2.5s timeout).
+    """
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    stop = threading.Event()
+
+    def _send():
+        layer = get_channel_layer()
+        if layer is None:
+            return
+        try:
+            async_to_sync(layer.group_send)(
+                f'chat_{chat.id}',
+                {'type': 'chat.typing', 'payload': {'user_id': bot.pk, 'is_typing': True}},
+            )
+        except Exception:
+            logger.debug('chat.typing yuborib bo\'lmadi (chat=%s)', chat.id, exc_info=True)
+
+    def _loop():
+        while not stop.is_set():
+            _send()
+            if stop.wait(2.0):
+                break
+
+    threading.Thread(target=_loop, daemon=True, name='ai-support-typing').start()
+    return stop
+
+
+def build_bot_reply(chat_id, message_id, stop_typing=None):
     """Background thread: kontekstni yig'ib AI'ga yuboradi va natijani chatga yozadi."""
     from django.db import close_old_connections
 
@@ -130,6 +165,8 @@ def build_bot_reply(chat_id, message_id):
     except Exception:
         logger.exception('AI javobni tayyorlashda xato (chat=%s)', chat_id)
     finally:
+        if stop_typing is not None:
+            stop_typing.set()
         close_old_connections()
 
 

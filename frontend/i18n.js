@@ -62,6 +62,7 @@
             'settings.new_folder': "Yangi papka",
             'settings.new_group': "Yangi guruh",
             'settings.new_channel': "Yangi kanal",
+            'settings.new_chat': "Yangi chat",
             'settings.contacts': "Kontaktlar",
 
             'app.search': "Qidirish",

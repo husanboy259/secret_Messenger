@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         manageTab: 'admins',
         manageMembers: [],       // manage modaldagi joriy a'zolar
         pendingAvatarUrl: null,  // guruh yaratishda yuklangan rasm URL
+        prefetching: new Set(),  // oldindan yuklanayotgan chat id'lari
     };
 
     const dom = {
@@ -379,6 +380,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             state.activeChatId = null;
             clearConv();
             renderChatList();
+            // Ro'yxatdagi birinchi chatlarni oldindan yuklaymiz — ochilganda kechikmasin.
+            prefetchMessages();
         } catch (err) {
             toast('Chatlarni yuklab bo\'lmadi: ' + fmtErr(err));
         }
@@ -388,6 +391,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.conv.hidden = true;
         dom.stageEmpty.hidden = false;
         closeSocket();
+    }
+
+    /* Ro'yxatdagi chatlarni oldindan yuklash — ochilganda kechikmasin. */
+    function prefetchMessages() {
+        const limit = 6;
+        const targets = state.chats
+            .filter(c => !state.messagesCache[c.id] && !state.prefetching.has(c.id))
+            .slice(0, limit);
+        if (!targets.length) return;
+        targets.forEach(chat => {
+            state.prefetching.add(chat.id);
+            apiJSON(`/api/chats/${chat.id}/messages/?limit=100`)
+                .then(data => {
+                    state.messagesCache[chat.id] = Array.isArray(data) ? data : (data.results || []);
+                })
+                .catch(() => {})
+                .finally(() => state.prefetching.delete(chat.id));
+        });
     }
 
     function renderChatList() {
@@ -437,7 +458,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const chat = state.chats.find(c => c.id === id);
         if (!chat) return;
         state.activeChatId = id;
-        renderChatList();
+        // Butun ro'yxatni qayta chizmasdan faqat aktiv qatorni almashtiramiz.
+        dom.chatList.querySelectorAll('.chat.is-active').forEach(el => el.classList.remove('is-active'));
+        const row = dom.chatList.querySelector('[data-chat-id="' + id + '"]');
+        if (row) row.classList.add('is-active');
         renderConversation();
         if (window.matchMedia('(max-width: 900px)').matches) dom.app.classList.add('is-list-hidden');
     }
@@ -1076,6 +1100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function upsertMessage(data) {
+        hideTyping(); // yangi xabar keldi — "yozmoqda" indikatorini yashiramiz
         // Optimistik xabar (id=null, client_id bor) bilan server echosi (id bor,
         // client_id ham bor) bir xil xabar — client_id yoki id bo'yicha topamiz.
         const existing = state.messages.findIndex(m => {
@@ -1111,17 +1136,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /* typing */
     let typingTimeout;
-    function showTyping() {
-        if ($('#typing-row')) return;
-        dom.messageList.insertAdjacentHTML('beforeend', `
-            <div class="msg msg--in" id="typing-row">
-                <span class="msg__avatar"><span class="avatar avatar--sm">…</span></span>
-                <div class="bubble"><span class="typing"><span></span><span></span><span></span></span></div>
-            </div>`);
-        scrollBottom(dom.convBody);
+    function showTyping(durationMs = 2500) {
+        const existing = $('#typing-row');
+        if (!existing) {
+            dom.messageList.insertAdjacentHTML('beforeend', `
+                <div class="msg msg--in" id="typing-row">
+                    <span class="msg__avatar"><span class="avatar avatar--sm">…</span></span>
+                    <div class="bubble"><span class="typing"><span></span><span></span><span></span></span></div>
+                </div>`);
+            scrollBottom(dom.convBody);
+        }
+        // Har chaqiruvda taymerni yangilaymiz — backend 2s da bir `chat.typing`
+        // yuboradi, shuning uchun indikator AI javobgacha yo'qolmaydi.
         clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => { $('#typing-row')?.remove(); }, 2500);
+        typingTimeout = setTimeout(() => { $('#typing-row')?.remove(); }, durationMs);
     }
+    function hideTyping() { clearTimeout(typingTimeout); $('#typing-row')?.remove(); }
 
     /* mark read */
     async function markChatRead(chatId) {
@@ -1228,6 +1258,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 action: 'message.create', text, reply_to: replyTo, client_id: clientId,
                 attachment_id: attachment ? attachment.id : null,
             }));
+            // Support bot — server background threadda javob tayyorlaydi, shuning
+            // uchun foydalanuvchiga "yozmoqda" indikatorini ko'rsatamiz.
+            if (chat.is_bot) showTyping(20000);
             return;
         }
         // 3) WS bo'lmasa REST zaxira (ovoz bo'lsa — avval yuklash)
@@ -2617,6 +2650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setDrawer(false);
         if (route === 'profile') window.location.href = '/profile.html';
         else if (route === 'new-folder') openFolderModal();
+        else if (route === 'new-chat') openAddChat('private');
         else if (route === 'new-group') openAddChat('group');
         else if (route === 'new-channel') openAddChat('channel');
         else if (route === 'contacts') openContacts();
