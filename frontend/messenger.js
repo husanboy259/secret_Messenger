@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         callLocal: $('#callLocal'),
         callRemote: $('#callRemote'),
         callAvatar: $('#callAvatar'),
+        callPulse: $('#callPulse'),
         callName: $('#callName'),
         callState: $('#callState'),
         callTime: $('#callTime'),
@@ -871,7 +872,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.callLocal.hidden = !!call.kind;
         dom.callTime.hidden = true;
         dom.callOverlay.hidden = false;
-        dom.callState.textContent = call.state === 'ringing' ? 'Chaqlash…'
+        if (dom.callPulse) {
+            dom.callPulse.classList.remove('is-ringing', 'is-incoming');
+            if (call.state === 'ringing' && call.incomingOffer) dom.callPulse.classList.add('is-incoming');
+            else if (call.state === 'ringing') dom.callPulse.classList.add('is-ringing');
+        }
+        dom.callState.textContent = call.state === 'ringing' ? (call.incomingOffer ? 'Kiruvchi qo\'ng\'iroq…' : 'Chaqlash…')
             : call.state === 'connecting' ? 'Ulanish…'
             : 'Qo\'ng\'iroq';
         dom.callAvatar.innerHTML = avatarHTML(call.peer, 'lg');
@@ -893,8 +899,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         call.kind = kind;
         call.peer = peer;
         call.chatId = chat.id;
+        call.callId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
         call.stream = stream;
+        if (dom.callPulse) { dom.callPulse.classList.remove('is-incoming'); dom.callPulse.classList.add('is-ringing'); }
         setupCallUI();
+        startRing();
 
         call.pc = new RTCPeerConnection(ICE);
         stream.getTracks().forEach(t => call.pc.addTrack(t, stream));
@@ -946,8 +955,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 call.chatId = chat ? chat.id : null;
                 call.incomingOffer = data;
                 call.pending = [];
+                if (dom.callPulse) { dom.callPulse.classList.remove('is-ringing'); dom.callPulse.classList.add('is-incoming'); }
                 setupCallUI();
-                dom.callState.textContent = 'Chalindi…';
+                startRing();
+                dom.callState.textContent = 'Kiruvchi qo\'ng\'iroq…';
                 dom.callTime.hidden = true;
                 startRing();
             }
@@ -1005,13 +1016,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const answer = await call.pc.createAnswer();
             await call.pc.setLocalDescription(answer);
             sendSignal({ type: 'answer', sdp: call.pc.localDescription.toJSON(), to: call.peer.id });
+            call.state = 'connecting';
+            call.incomingOffer = null;
+            if (dom.callPulse) dom.callPulse.classList.remove('is-ringing', 'is-incoming');
+            setupCallUI();
+            startTimer();
+            call.pending.forEach(c => call.pc.addIceCandidate(c).catch(() => { }));
+            call.pending = [];
+            persistCall('started');
         } catch { endCallUi(true); return; }
-
-        call.pending.forEach(c => call.pc.addIceCandidate(c).catch(() => { }));
-        call.pending = [];
-        call.state = 'connecting';
-        call.incomingOffer = null;
-        persistCall('started');
         call.startAt = Date.now();
         dom.callState.textContent = 'Ulanish…';
         startTimer();
@@ -1072,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         call.chatId = null;
         call.callId = null;
         call.state = 'idle';
+        if (dom.callPulse) dom.callPulse.classList.remove('is-ringing', 'is-incoming');
         if (notified) toast('Qo\'ng\'iroq tugatildi');
         dom.callOverlay.hidden = true;
     }

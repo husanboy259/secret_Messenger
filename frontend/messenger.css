@@ -1490,6 +1490,44 @@ button.user-row:hover { background: var(--hover); }
     pointer-events: none;
     padding-bottom: 120px;
 }
+.call__pulse {
+    position: relative;
+    display: grid;
+    place-items: center;
+    margin-bottom: 6px;
+}
+.call__pulse::before,
+.call__pulse::after {
+    content: '';
+    position: absolute;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(47, 168, 79, 0.24) 0%, rgba(47, 168, 79, 0) 70%);
+    animation: call-pulse 1.8s ease-out infinite;
+}
+.call__pulse::after {
+    animation-delay: 0.6s;
+}
+.call__pulse .avatar {
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 18px 60px rgba(15, 23, 42, 0.45);
+}
+@keyframes call-pulse {
+    0% { transform: scale(0.8); opacity: 0.9; }
+    70% { transform: scale(1.9); opacity: 0; }
+    100% { transform: scale(0.8); opacity: 0; }
+}
+.call__pulse.is-ringing::before,
+.call__pulse.is-ringing::after {
+    background: radial-gradient(circle, rgba(47, 168, 79, 0.28) 0%, rgba(47, 168, 79, 0) 72%);
+}
+.call__pulse.is-incoming::before,
+.call__pulse.is-incoming::after {
+    animation-duration: 1.4s;
+    background: radial-gradient(circle, rgba(46, 166, 255, 0.22) 0%, rgba(46, 166, 255, 0) 72%);
+}
 .call__name { font-size: 1.4rem; font-weight: 600; }
 .call__state { color: #a7b0c9; font-size: 0.9rem; }
 .call__time { color: #cfd6ea; font-size: 1rem; font-variant-numeric: tabular-nums; }
